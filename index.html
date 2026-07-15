@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Storebrand (STB) – Aksjeoversikt</title>
+<meta name="description" content="Samlet oversikt over Storebrand-aksjen (STB): kurs, utbytte, kvartalsrapporter, innsidehandel, sammenligning med lignende selskaper og nyheter som kan påvirke kursen.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232a78d6%22/><text x=%2250%22 y=%2268%22 font-size=%2256%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22sans-serif%22 font-weight=%22bold%22>S</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="site-top">
+      <div class="brand">
+        <span class="name">Storebrand</span>
+        <span class="ticker">STB · Oslo Børs</span>
+      </div>
+      <div class="live-price">
+        <span class="px" id="live-price-value">–</span>
+        <span class="chg" id="live-price-change"></span>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Bytt fargetema">Mørkt</button>
+    </div>
+    <nav class="tabs" aria-label="Seksjoner">
+      <a href="#oversikt">Oversikt</a>
+      <a href="#utbytte">Utbytte</a>
+      <a href="#rapporter">Rapporter</a>
+      <a href="#innsidehandel">Innsidehandel</a>
+      <a href="#sammenligning">Sammenligning</a>
+      <a href="#nyheter">Nyheter</a>
+      <a href="#kilder">Kilder</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero" id="oversikt">
+    <h1>Storebrand-aksjen (STB) – full oversikt</h1>
+    <p class="sub">Alt du trenger for å forstå Storebrand-aksjen på ett sted: kurs, utbytte, rapporter, innsidehandel, sammenligning med lignende selskaper og hva som kan påvirke kursen fremover.</p>
+
+    <div class="hero-figure">
+      <span class="value" id="hero-price">–</span>
+      <span class="delta" id="hero-delta"></span>
+    </div>
+    <div class="asof" id="hero-asof"></div>
+
+    <div class="stat-grid" id="stat-grid"></div>
+  </section>
+
+  <section class="card" id="kursutvikling">
+    <h2>52-ukers kursspenn</h2>
+    <p class="desc">Viser hvor dagens kurs ligger mellom laveste og høyeste kurs siste 52 uker, samt analytikernes gjennomsnittlige kursmål (grå strek).</p>
+    <div class="meter-block">
+      <div class="meter-labels">
+        <span id="range-low">–</span>
+        <span id="range-high">–</span>
+      </div>
+      <div class="meter-track" id="range-track"></div>
+    </div>
+    <div class="meter-legend">
+      <span><span class="dot" style="background:var(--series-1)"></span>Dagens kurs</span>
+      <span><span class="dot" style="background:var(--text-muted)"></span>Analytikernes kursmål</span>
+    </div>
+  </section>
+
+  <section class="card" id="utbytte">
+    <h2>Utbyttehistorikk</h2>
+    <p class="desc">Storebrand betaler normalt ut utbytte én gang i året, i april. Utbyttet har økt hvert år siden 2022.</p>
+    <svg id="dividend-chart" role="img" aria-label="Søylediagram over utbytte per aksje 2022–2026"></svg>
+    <details class="data-table">
+      <summary>Vis utbyttedata som tabell</summary>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>År</th><th class="num">Utbytte / aksje</th><th class="num">Ex-dato</th><th class="num">Utbetalingsdato</th></tr></thead>
+          <tbody id="dividend-table-body"></tbody>
+        </table>
+      </div>
+    </details>
+    <div class="stat-grid" style="margin-top:18px;">
+      <div class="stat-tile"><div class="label">Direkteavkastning</div><div class="value small" id="div-yield"></div></div>
+      <div class="stat-tile"><div class="label">Utdelingsgrad</div><div class="value small" id="div-payout"></div></div>
+      <div class="stat-tile"><div class="label">Vekst siste år</div><div class="value small" id="div-growth"></div></div>
+    </div>
+  </section>
+
+  <section class="card" id="rapporter">
+    <h2>Kvartalsrapporter og resultater</h2>
+    <p class="desc">Siste rapportering: <strong id="report-period"></strong>, publisert <strong id="report-date"></strong>.</p>
+    <ul class="plain" id="report-highlights"></ul>
+
+    <h3 style="margin-top:22px; font-size:1rem;">Finanskalender</h3>
+    <div class="calendar-list" id="report-calendar"></div>
+
+    <div class="links-row" id="report-links"></div>
+  </section>
+
+  <section class="card" id="innsidehandel">
+    <h2>Innsidehandel og tilbakekjøp</h2>
+    <p class="desc" id="insider-note"></p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Dato</th><th>Person / gruppe</th><th>Type</th><th class="num">Antall aksjer</th><th class="num">Kurs</th><th class="num">Verdi</th></tr></thead>
+        <tbody id="insider-table-body"></tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:22px; font-size:1rem;">Tilbakekjøp av egne aksjer</h3>
+    <p class="desc" id="buyback-desc"></p>
+    <p class="desc" id="buyback-treasury"></p>
+
+    <h3 style="margin-top:22px; font-size:1rem;">Eierstruktur</h3>
+    <p class="desc" id="ownership-note"></p>
+  </section>
+
+  <section class="card" id="sammenligning">
+    <h2>Sammenligning med lignende selskaper</h2>
+    <p class="desc">Storebrand sammenlignet med andre nordiske forsikrings- og finanskonsern: Gjensidige, Protector Forsikring, Tryg (Danmark) og Sampo (Finland). Merk at selskapene handles i ulik valuta (NOK/DKK/EUR) — P/E og direkteavkastning er valutanøytrale nøkkeltall og derfor best egnet for direkte sammenligning.</p>
+
+    <h3 style="font-size:1rem;">P/E (pris/inntjening)</h3>
+    <svg id="pe-chart" role="img" aria-label="Søylediagram som sammenligner P/E for Storebrand og fire konkurrenter"></svg>
+
+    <h3 style="font-size:1rem; margin-top:24px;">Direkteavkastning (utbytte)</h3>
+    <svg id="yield-chart" role="img" aria-label="Søylediagram som sammenligner direkteavkastning for Storebrand og fire konkurrenter"></svg>
+
+    <details class="data-table">
+      <summary>Vis alle nøkkeltall som tabell</summary>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Selskap</th><th class="num">Kurs</th><th class="num">Markedsverdi</th><th class="num">P/E</th><th class="num">Direkteavkastning</th><th class="num">1 år</th></tr></thead>
+          <tbody id="peer-table-body"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="nyheter">
+    <h2>Nyheter og faktorer som kan påvirke kursen</h2>
+    <p class="desc">En oversikt over det viktigste som skjer med Storebrand akkurat nå, og hva som er verdt å følge med på fremover.</p>
+    <div class="news-grid" id="news-grid"></div>
+  </section>
+
+</main>
+
+<footer class="site" id="kilder">
+  <div class="wrap">
+    <h2>Kilder og forbehold</h2>
+    <ol id="sources-list"></ol>
+    <div class="disclaimer">
+      <strong>Dette er ikke investeringsrådgivning.</strong> Tallene på denne siden er hentet fra offentlig tilgjengelige kilder sist oppdatert <span id="footer-updated"></span>, og kan avvike fra sanntidskurser og senere oppdaterte tall. Aksjekurser svinger kontinuerlig — sjekk alltid Oslo Børs, Storebrands egne børsmeldinger eller din megler for oppdaterte og nøyaktige tall før du tar investeringsbeslutninger.
+    </div>
+  </div>
+</footer>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="js/data.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
