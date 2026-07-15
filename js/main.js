@@ -12,6 +12,30 @@ function fmtPctShort(v) {
   return (v > 0 ? "+" : "") + nf1.format(v) + " %";
 }
 
+/* ---------- Apply live snapshot over hand-curated data ---------- */
+(function applyLive() {
+  if (typeof STB_LIVE === "undefined") return;
+  if (STB_LIVE.updated) STB_DATA.meta.updated = STB_LIVE.updated;
+  if (STB_LIVE.quote) {
+    const q = STB_LIVE.quote;
+    Object.keys(q).forEach(k => {
+      if (k === "perf" && q.perf) {
+        STB_DATA.quote.perf = Object.assign({}, STB_DATA.quote.perf, q.perf);
+      } else if (q[k] !== undefined && q[k] !== null) {
+        STB_DATA.quote[k] = q[k];
+      }
+    });
+  }
+  if (STB_LIVE.peers) {
+    STB_DATA.peers.forEach(p => {
+      const live = STB_LIVE.peers[p.ticker];
+      if (!live) return;
+      if (live.price != null) p.price = live.price;
+      if (live.oneYearPct != null) p.oneYearPct = Math.round(live.oneYearPct);
+    });
+  }
+})();
+
 const SVGNS = "http://www.w3.org/2000/svg";
 function el(tag, attrs) {
   const n = document.createElementNS(SVGNS, tag);
