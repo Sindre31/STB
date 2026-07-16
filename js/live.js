@@ -3,61 +3,60 @@
 // dataDate = siste handelsdato; brukes til å vise et varsel hvis dataene blir utdaterte.
 const STB_LIVE = {
   "updated": "16. juli 2026",
-  "dataDate": "2026-07-14",
+  "dataDate": "2026-07-16",
   "quote": {
-    "price": 198.8,
-    "change": 10.1,
-    "changePct": 5.35,
-    "week52Low": 144.6,
+    "price": 196.7,
+    "change": -2.1,
+    "changePct": -1.06,
+    "week52Low": 145.1,
     "week52High": 199.5,
-    "volume": 1407227,
-    "peTtm": 18.39,
-    "peForward": 15.01,
-    "dividendYield": 2.86,
-    "marketCap": 83.23,
-    "epsTtm": 10.81,
-    "beta": 0.52,
+    "volume": 481276,
+    "peTtm": 17.24,
+    "peForward": 14.73,
+    "dividendYield": 2.72,
+    "marketCap": 82.35,
+    "epsTtm": 11.41,
     "perf": {
-      "oneY": 29.5,
-      "fiveY": 158.2,
-      "sinceGraph": 368.5
+      "oneY": 34.1,
+      "fiveY": 155.5,
+      "sinceGraph": 363.6
     }
   },
   "peers": {
     "STB.OL": {
-      "pe": 18.39,
-      "dividendYield": 2.86,
-      "marketCap": 83.23,
-      "price": 198.8,
-      "oneYearPct": 34.7
+      "pe": 17.24,
+      "dividendYield": 2.72,
+      "marketCap": 82.35,
+      "price": 196.7,
+      "oneYearPct": 33.3
     },
     "GJF.OL": {
-      "pe": 21.5,
-      "dividendYield": 3.54,
-      "marketCap": 137.49,
-      "price": 275,
-      "oneYearPct": -2.2
+      "pe": 21.67,
+      "dividendYield": 3.64,
+      "marketCap": 138.59,
+      "price": 277.2,
+      "oneYearPct": -1.4
     },
     "PROT.OL": {
-      "pe": 19.62,
-      "dividendYield": 4.12,
-      "marketCap": 40.04,
-      "price": 486.4,
-      "oneYearPct": -6.3
+      "pe": 19.58,
+      "dividendYield": 4.11,
+      "marketCap": 39.99,
+      "price": 485.8,
+      "oneYearPct": -6.4
     },
     "TRYG.CO": {
-      "pe": 20.62,
-      "dividendYield": 5.42,
-      "marketCap": 91.41,
-      "price": 153.4,
-      "oneYearPct": -3.8
+      "pe": 20.7,
+      "dividendYield": 5.48,
+      "marketCap": 91.77,
+      "price": 154,
+      "oneYearPct": -3.4
     },
     "SAMPO.HE": {
-      "pe": 15.61,
-      "dividendYield": 3.73,
-      "marketCap": 25.14,
-      "price": 9.52,
-      "oneYearPct": 0.6
+      "pe": 15.66,
+      "dividendYield": 3.78,
+      "marketCap": 25.22,
+      "price": 9.55,
+      "oneYearPct": 1
     }
   }
 };
