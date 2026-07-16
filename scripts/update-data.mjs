@@ -78,6 +78,15 @@ async function fetchFundamentals(ticker, auth) {
 }
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null && !Number.isNaN(v)));
 
+async function seriesForTicker(ticker) {
+  const [a, b, c] = await Promise.all([
+    fetchChart(ticker, "1y", "1d"),
+    fetchChart(ticker, "5y", "1wk"),
+    fetchChart(ticker, "max", "1mo"),
+  ]);
+  return { oneY: seriesFrom(a, "day"), fiveY: seriesFrom(b, "day"), max: seriesFrom(c, "month") };
+}
+
 async function main() {
   // ---- STB kursserier (obligatorisk) ----
   const [oneYres, fiveYres, maxRes, fiveDres] = await Promise.all([
@@ -138,13 +147,23 @@ async function main() {
     if (Object.keys(entry).length) peers[p.ticker] = entry;
   });
 
+  // ---- Peer-kursserier (for indeksert sammenligningsgraf) ----
+  const peerSeries = {};
+  for (const p of PEERS) {
+    if (p.ticker === "STB.OL") continue;
+    const s = await seriesForTicker(p.ticker).catch(() => null);
+    if (s && s.oneY.length) peerSeries[p.ticker] = s;
+  }
+
   const updated = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
 
   const pricesJs =
-    "// Ekte historiske sluttkurser for STB.OL (Oslo Børs), hentet via Yahoo Finance chart-API.\n" +
-    "// oneY: siste 12 mnd (daglig) · fiveY: 5 år (ukentlig) · max: siden 2000 (månedlig).\n" +
+    "// Ekte historiske sluttkurser (Oslo Børs / Nordiske børser), hentet via Yahoo Finance chart-API.\n" +
+    "// oneY: siste 12 mnd (daglig) · fiveY: 5 år (ukentlig) · max: lang historikk (månedlig).\n" +
+    "// STB_PEER_PRICES brukes til den indekserte sammenligningsgrafen.\n" +
     "// AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.\n" +
-    "const STB_PRICES = " + JSON.stringify({ oneY, fiveY, max }) + ";\n";
+    "const STB_PRICES = " + JSON.stringify({ oneY, fiveY, max }) + ";\n" +
+    "const STB_PEER_PRICES = " + JSON.stringify(peerSeries) + ";\n";
 
   const liveJs =
     "// Siste snapshot (kurs + nøkkeltall), AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.\n" +

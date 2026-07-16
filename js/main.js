@@ -1,49 +1,72 @@
+/* Storebrand Aksjeoversikt – rendering mot ekte data (data.js + prices.js + live.js). */
+
 const nf0 = new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 0 });
 const nf1 = new Intl.NumberFormat("nb-NO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const nf2 = new Intl.NumberFormat("nb-NO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const kr = (v, d = 2) => (d === 2 ? nf2 : nf1).format(v) + " kr";
+const pct = (v) => (v > 0 ? "+" : "") + nf2.format(v) + " %";
+const pct1 = (v) => (v > 0 ? "+" : "") + nf1.format(v) + " %";
 
-function fmtKr(v, decimals = 2) {
-  return (decimals === 2 ? nf2 : nf1).format(v) + " kr";
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, text) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  return n;
 }
-function fmtPct(v) {
-  return (v > 0 ? "+" : "") + nf2.format(v) + " %";
-}
-function fmtPctShort(v) {
-  return (v > 0 ? "+" : "") + nf1.format(v) + " %";
-}
+function h(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
 
-/* ---------- Apply live snapshot over hand-curated data ---------- */
+/* ---------- Live-overlay over håndkuratert data ---------- */
 (function applyLive() {
   if (typeof STB_LIVE === "undefined") return;
   if (STB_LIVE.updated) STB_DATA.meta.updated = STB_LIVE.updated;
   if (STB_LIVE.quote) {
     const q = STB_LIVE.quote;
-    Object.keys(q).forEach(k => {
-      if (k === "perf" && q.perf) {
-        STB_DATA.quote.perf = Object.assign({}, STB_DATA.quote.perf, q.perf);
-      } else if (q[k] !== undefined && q[k] !== null) {
-        STB_DATA.quote[k] = q[k];
-      }
+    Object.keys(q).forEach((k) => {
+      if (k === "perf" && q.perf) STB_DATA.quote.perf = Object.assign({}, STB_DATA.quote.perf, q.perf);
+      else if (q[k] != null) STB_DATA.quote[k] = q[k];
     });
   }
   if (STB_LIVE.peers) {
-    STB_DATA.peers.forEach(p => {
-      const live = STB_LIVE.peers[p.ticker];
-      if (!live) return;
-      if (live.price != null) p.price = live.price;
-      if (live.oneYearPct != null) p.oneYearPct = Math.round(live.oneYearPct);
-      if (live.pe != null) p.pe = live.pe;
-      if (live.dividendYield != null) p.dividendYield = live.dividendYield;
-      if (live.marketCap != null) p.marketCap = live.marketCap;
+    STB_DATA.peers.forEach((p) => {
+      const lv = STB_LIVE.peers[p.ticker];
+      if (!lv) return;
+      if (lv.price != null) p.price = lv.price;
+      if (lv.oneYearPct != null) p.oneYearPct = Math.round(lv.oneYearPct);
+      if (lv.pe != null) p.pe = lv.pe;
+      if (lv.dividendYield != null) p.dividendYield = lv.dividendYield;
+      if (lv.marketCap != null) p.marketCap = lv.marketCap;
     });
   }
 })();
 
-/* ---------- Stale-data banner: varsle hvis auto-oppdateringen har stoppet ---------- */
+/* ---------- Tema ---------- */
+(function initTheme() {
+  const saved = localStorage.getItem("stb-theme");
+  if (saved === "light") document.body.classList.add("light");
+  const btn = document.getElementById("theme-btn");
+  const setLabel = () => { btn.textContent = document.body.classList.contains("light") ? "Mørkt tema" : "Lyst tema"; };
+  setLabel();
+  btn.addEventListener("click", () => {
+    document.body.classList.toggle("light");
+    localStorage.setItem("stb-theme", document.body.classList.contains("light") ? "light" : "dark");
+    setLabel();
+  });
+})();
+
+/* ---------- Tooltip ---------- */
+const tooltip = document.getElementById("tooltip");
+function showTip(evt, html) {
+  tooltip.innerHTML = html;
+  tooltip.style.left = evt.clientX + "px";
+  tooltip.style.top = evt.clientY + "px";
+  tooltip.classList.add("show");
+}
+const hideTip = () => tooltip.classList.remove("show");
+
+/* ---------- Stale-varsel ---------- */
 (function staleCheck() {
   const banner = document.getElementById("stale-banner");
-  if (!banner) return;
-  // Ingen live-fil lastet i det hele tatt:
   if (typeof STB_LIVE === "undefined" || !STB_LIVE.dataDate) {
     banner.textContent = "⚠ Kunne ikke laste ferske kursdata — viser sist lagrede tall.";
     banner.hidden = false;
@@ -51,7 +74,6 @@ function fmtPctShort(v) {
   }
   const last = new Date(STB_LIVE.dataDate + "T00:00:00Z");
   const days = Math.floor((Date.now() - last.getTime()) / 86400000);
-  // Børsen er stengt i helger/helligdager, så 5 dager gir rom uten falske varsler.
   if (days > 5) {
     const d = last.toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
     banner.textContent = `⚠ Kursdataene kan være utdaterte. Siste registrerte handelsdag er ${d} (${days} dager siden) — den automatiske oppdateringen kan ha feilet.`;
@@ -59,489 +81,379 @@ function fmtPctShort(v) {
   }
 })();
 
-const SVGNS = "http://www.w3.org/2000/svg";
-function el(tag, attrs) {
-  const n = document.createElementNS(SVGNS, tag);
-  for (const k in attrs) n.setAttribute(k, attrs[k]);
-  return n;
+/* ---------- Nav + header ---------- */
+const NAV = [
+  ["oversikt", "Oversikt"], ["kurs", "Kurs"], ["prediksjon", "Prediksjon"], ["selskap", "Selskap"],
+  ["utbytte", "Utbytte"], ["nokkeltall", "Nøkkeltall"], ["rapporter", "Rapporter"],
+  ["innsidehandel", "Innsidehandel"], ["sammenligning", "Sammenligning"], ["nyheter", "Nyheter"], ["kilder", "Kilder"],
+];
+function renderNav() {
+  const nav = document.getElementById("nav-tabs");
+  NAV.forEach(([id, label]) => { const a = document.createElement("a"); a.href = "#" + id; a.textContent = label; nav.appendChild(a); });
 }
-
-/* ---------- Theme toggle ---------- */
-(function initTheme() {
-  const root = document.documentElement;
-  const saved = localStorage.getItem("stb-theme");
-  if (saved) root.setAttribute("data-theme", saved);
-  const btn = document.getElementById("theme-toggle");
-  const currentScheme = () =>
-    root.getAttribute("data-theme") ||
-    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  const setLabel = () => { btn.textContent = currentScheme() === "dark" ? "☀ Lyst" : "● Mørkt"; };
-  setLabel();
-  btn.addEventListener("click", () => {
-    const next = currentScheme() === "dark" ? "light" : "dark";
-    root.setAttribute("data-theme", next);
-    localStorage.setItem("stb-theme", next);
-    setLabel();
-    if (window._redrawPriceChart) window._redrawPriceChart();
-  });
-})();
-
-/* ---------- Shared tooltip ---------- */
-const tooltip = document.getElementById("tooltip");
-function showTooltip(evt, html) {
-  tooltip.innerHTML = html;
-  tooltip.style.left = evt.clientX + "px";
-  tooltip.style.top = evt.clientY + "px";
-  tooltip.classList.add("show");
-}
-function hideTooltip() { tooltip.classList.remove("show"); }
-
-/* ---------- Header live price ---------- */
 function renderHeader() {
-  const q = STB_DATA.quote;
-  const up = q.change >= 0;
-  document.getElementById("live-price-value").textContent = fmtKr(q.price);
-  const chgEl = document.getElementById("live-price-change");
-  chgEl.textContent = `${up ? "▲" : "▼"} ${fmtPct(q.changePct)}`;
-  chgEl.classList.add(up ? "up" : "down");
+  const q = STB_DATA.quote, up = q.change >= 0;
+  document.getElementById("head-price").textContent = kr(q.price);
+  const c = document.getElementById("head-change");
+  c.textContent = `${up ? "▲" : "▼"} ${pct(q.changePct)}`;
+  c.className = "chg " + (up ? "up" : "down");
+  document.getElementById("head-updated").textContent = "Oppdatert " + STB_DATA.meta.updated;
 }
 
-/* ---------- Hero ---------- */
-function renderHero() {
-  const q = STB_DATA.quote;
-  const up = q.change >= 0;
-  document.getElementById("hero-price").textContent = fmtKr(q.price);
-  const d = document.getElementById("hero-delta");
-  d.textContent = `${up ? "▲" : "▼"} ${fmtKr(Math.abs(q.change))} (${fmtPct(q.changePct)}) i dag`;
-  d.classList.add(up ? "up" : "down");
-  document.getElementById("hero-asof").textContent =
-    `Sist oppdatert ${STB_DATA.meta.updated} · ${STB_DATA.meta.ticker} · ${STB_DATA.meta.exchange} · ${STB_DATA.meta.indices}`;
-
-  const k = STB_DATA.kpis;
+/* ---------- Stat-grid ---------- */
+function renderStats() {
+  const q = STB_DATA.quote, k = STB_DATA.kpis;
   const tiles = [
-    ["Markedsverdi", `${nf1.format(q.marketCap)} mrd kr`],
-    ["P/E (siste 12 mnd)", nf2.format(q.peTtm)],
-    ["Direkteavkastning", nf2.format(q.dividendYield) + " %"],
-    ["Solvensmargin", k.solvency + " %"],
-    ["Egenkapitalavkastning", k.roeTtm + " %"],
-    ["Forvaltningskapital", `${nf0.format(k.aum)} mrd kr`],
-    ["Avkastning 1 år", fmtPctShort(q.perf.oneY)],
-    ["Analytikere", `${q.analystRating} · mål ${fmtKr(q.analystTarget)}`],
+    ["Kurs", kr(q.price), pct1(q.changePct) + " i dag"],
+    ["Markedsverdi", nf1.format(q.marketCap) + " mrd", "NOK"],
+    ["P/E", nf1.format(q.peTtm), "Siste 12 mnd"],
+    ["Direkteavkastning", nf1.format(q.dividendYield) + " %", "Utbytte/kurs"],
+    ["Solvensmargin", k.solvency + " %", "Bufferkapital"],
+    ["Avkastning 1 år", pct1(q.perf.oneY), "Kursutvikling"],
   ];
-  const grid = document.getElementById("stat-grid");
-  tiles.forEach(([label, value]) => {
-    const tile = document.createElement("div");
-    tile.className = "stat-tile";
-    tile.innerHTML = `<div class="label">${label}</div><div class="value small">${value}</div>`;
-    grid.appendChild(tile);
+  const g = document.getElementById("stat-grid");
+  tiles.forEach(([label, val, sub]) => {
+    g.appendChild(h(`<div class="stat"><div class="label">${label}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`));
   });
 }
 
-/* ---------- Company profile ---------- */
-function renderCompany() {
-  const c = STB_DATA.company;
-  document.getElementById("company-desc").textContent = c.description;
-  const facts = [
-    ["Grunnlagt", c.founded],
-    ["Hovedkontor", c.hq],
-    ["Konsernsjef", c.ceo],
-    ["Ansatte", c.employees],
-    ["Markeder", c.markets],
-    ["Børs", `${STB_DATA.meta.exchange} · ${STB_DATA.meta.indices}`],
-  ];
-  const fl = document.getElementById("company-facts");
-  facts.forEach(([k, v]) => {
-    const row = document.createElement("div");
-    row.className = "fact-row";
-    row.innerHTML = `<span class="fact-k">${k}</span><span class="fact-v">${v}</span>`;
-    fl.appendChild(row);
-  });
-  const subs = document.getElementById("company-subs");
-  c.subsidiaries.forEach(s => {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.textContent = s;
-    subs.appendChild(chip);
-  });
-}
+/* ---------- Prisgraf med periode + peer-sammenligning ---------- */
+const PERIODS = [["oneY", "1 år"], ["fiveY", "5 år"], ["max", "Maks"]];
+const PEER_SHORT = { "GJF.OL": "Gjensidige", "PROT.OL": "Protector", "TRYG.CO": "Tryg", "SAMPO.HE": "Sampo" };
 
-/* ---------- Interactive price line chart ---------- */
 function renderPriceChart() {
   const svg = document.getElementById("price-chart");
-  const rangeMap = { "1Y": STB_PRICES.oneY, "5Y": STB_PRICES.fiveY, "MAX": STB_PRICES.max };
-  let currentRange = "1Y";
+  let period = "oneY", cmp = null;
 
-  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  const pBtns = document.getElementById("period-buttons");
+  PERIODS.forEach(([key, label]) => {
+    const b = h(`<button class="tbtn${key === period ? " active" : ""}">${label}</button>`);
+    b.addEventListener("click", () => { period = key; [...pBtns.children].forEach((x, i) => x.classList.toggle("active", PERIODS[i][0] === key)); draw(); });
+    pBtns.appendChild(b);
+  });
+  const peerWrap = document.getElementById("peer-buttons");
+  Object.keys(PEER_SHORT).forEach((tk) => {
+    if (!STB_PEER_PRICES[tk]) return;
+    const b = h(`<button class="pbtn" data-tk="${tk}">${PEER_SHORT[tk]}</button>`);
+    b.addEventListener("click", () => {
+      cmp = cmp === tk ? null : tk;
+      [...peerWrap.querySelectorAll(".pbtn")].forEach((x) => x.classList.toggle("active", x.dataset.tk === cmp));
+      draw();
+    });
+    peerWrap.appendChild(b);
+  });
 
+  const PADL = 48, PADR = 16, TOP = 14, BOT = 292, W = 800, XR = W - PADR;
   function draw() {
-    const data = rangeMap[currentRange];
     while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const stb = STB_PRICES[period];
+    const comparing = cmp && STB_PEER_PRICES[cmp] ? STB_PEER_PRICES[cmp][period] : null;
 
-    const width = 720, height = 300;
-    const padL = 48, padR = 16, padT = 16, padB = 28;
-    const innerW = width - padL - padR, innerH = height - padT - padB;
-    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    svg.classList.add("chart-svg");
-
-    const vals = data.map(d => d[1]);
-    let min = Math.min(...vals), max = Math.max(...vals);
-    const pad = (max - min) * 0.08 || 1;
-    min -= pad; max += pad;
-
-    const x = i => padL + (i / (data.length - 1)) * innerW;
-    const y = v => padT + innerH - ((v - min) / (max - min)) * innerH;
-
-    // gridlines + y labels (4 steps)
-    for (let s = 0; s <= 4; s++) {
-      const v = min + (max - min) * (s / 4);
-      const yy = y(v);
-      svg.appendChild(el("line", { x1: padL, x2: width - padR, y1: yy, y2: yy, class: "chart-gridline" }));
-      const t = el("text", { x: padL - 8, y: yy + 4, "text-anchor": "end", class: "chart-axis-text" });
-      t.textContent = nf0.format(v);
-      svg.appendChild(t);
+    // Indekser hvis sammenligning
+    let sA, sB, yMin, yMax, yFmt;
+    if (comparing) {
+      const idx = (arr) => arr.map((d, i) => arr[0][1] ? (d[1] / arr[0][1]) * 100 : 100);
+      sA = idx(stb); sB = idx(comparing);
+      yMin = Math.min(...sA, ...sB); yMax = Math.max(...sA, ...sB);
+      yFmt = (v) => nf0.format(v);
+    } else {
+      sA = stb.map((d) => d[1]); sB = null;
+      yMin = Math.min(...sA); yMax = Math.max(...sA);
+      yFmt = (v) => nf0.format(v);
     }
+    const padY = (yMax - yMin) * 0.08 || 1; yMin -= padY; yMax += padY;
+    const xA = (i, n) => PADL + (i / (n - 1)) * (XR - PADL);
+    const y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
 
-    // x labels (start, mid, end)
-    [0, Math.floor(data.length / 2), data.length - 1].forEach(i => {
-      const t = el("text", { x: x(i), y: height - 8, "text-anchor": i === 0 ? "start" : i === data.length - 1 ? "end" : "middle", class: "chart-axis-text" });
-      t.textContent = data[i][0];
-      svg.appendChild(t);
+    // gridlines + y-ticks
+    for (let s = 0; s <= 4; s++) {
+      const v = yMin + (yMax - yMin) * (s / 4), yy = y(v);
+      svg.appendChild(el("line", { x1: PADL, x2: XR, y1: yy, y2: yy, class: "chart-grid" }));
+      svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, yFmt(v)));
+    }
+    // x-ticks
+    [0, Math.floor(stb.length / 2), stb.length - 1].forEach((i) => {
+      svg.appendChild(el("text", { x: xA(i, stb.length), y: 314, "text-anchor": i === 0 ? "start" : i === stb.length - 1 ? "end" : "middle", class: "chart-axis" }, stb[i][0]));
     });
 
-    const up = vals[vals.length - 1] >= vals[0];
-    const lineColor = css(up ? "--good" : "--critical") || css("--series-1");
+    const path = (arr) => { let d = ""; arr.forEach((v, i) => { d += (i ? " L " : "M ") + xA(i, arr.length) + " " + y(v); }); return d; };
 
-    // area fill
-    let areaD = `M ${x(0)} ${y(vals[0])}`;
-    data.forEach((d, i) => { areaD += ` L ${x(i)} ${y(d[1])}`; });
-    areaD += ` L ${x(data.length - 1)} ${padT + innerH} L ${x(0)} ${padT + innerH} Z`;
-    const area = el("path", { d: areaD, fill: lineColor, "fill-opacity": "0.10", stroke: "none" });
-    svg.appendChild(area);
+    if (!comparing) {
+      let ad = path(sA) + ` L ${xA(sA.length - 1, sA.length)} ${BOT} L ${PADL} ${BOT} Z`;
+      svg.appendChild(el("path", { d: ad, fill: "var(--acc)", "fill-opacity": "0.08", stroke: "none" }));
+    } else {
+      svg.appendChild(el("path", { d: path(sB), fill: "none", stroke: "var(--peer)", "stroke-width": "2" }));
+    }
+    svg.appendChild(el("path", { d: path(sA), fill: "none", stroke: "var(--acc)", "stroke-width": "2.2" }));
 
-    // line
-    let lineD = `M ${x(0)} ${y(vals[0])}`;
-    data.forEach((d, i) => { lineD += ` L ${x(i)} ${y(d[1])}`; });
-    svg.appendChild(el("path", { d: lineD, fill: "none", stroke: lineColor, "stroke-width": "2", "stroke-linejoin": "round", "stroke-linecap": "round" }));
-
-    // crosshair layer
-    const vline = el("line", { x1: 0, x2: 0, y1: padT, y2: padT + innerH, stroke: css("--baseline"), "stroke-width": "1", opacity: "0" });
-    const dot = el("circle", { r: 4.5, fill: lineColor, stroke: css("--surface-1"), "stroke-width": "2", opacity: "0" });
-    svg.appendChild(vline); svg.appendChild(dot);
-
-    const overlay = el("rect", { x: padL, y: padT, width: innerW, height: innerH, fill: "transparent", "pointer-events": "all", style: "cursor:crosshair" });
+    // hover
+    const vline = el("line", { x1: 0, x2: 0, y1: TOP, y2: BOT, stroke: "var(--mut)", "stroke-width": "1", "stroke-dasharray": "3,3", opacity: "0" });
+    const dotA = el("circle", { r: 4, fill: "var(--acc)", opacity: "0" });
+    const dotB = el("circle", { r: 4, fill: "var(--peer)", opacity: "0" });
+    svg.appendChild(vline); svg.appendChild(dotA); svg.appendChild(dotB);
+    const overlay = el("rect", { x: PADL, y: TOP, width: XR - PADL, height: BOT - TOP, fill: "transparent", "pointer-events": "all" });
     svg.appendChild(overlay);
 
     function move(evt) {
-      const pt = svg.createSVGPoint();
-      const touch = evt.touches ? evt.touches[0] : evt;
-      pt.x = touch.clientX; pt.y = touch.clientY;
-      const ctm = svg.getScreenCTM();
-      if (!ctm) return;
+      const t = evt.touches ? evt.touches[0] : evt;
+      const pt = svg.createSVGPoint(); pt.x = t.clientX; pt.y = t.clientY;
+      const ctm = svg.getScreenCTM(); if (!ctm) return;
       const loc = pt.matrixTransform(ctm.inverse());
-      let i = Math.round(((loc.x - padL) / innerW) * (data.length - 1));
-      i = Math.max(0, Math.min(data.length - 1, i));
-      const px = x(i), py = y(data[i][1]);
+      const f = Math.max(0, Math.min(1, (loc.x - PADL) / (XR - PADL)));
+      const iA = Math.round(f * (sA.length - 1));
+      const px = xA(iA, sA.length), py = y(sA[iA]);
       vline.setAttribute("x1", px); vline.setAttribute("x2", px); vline.setAttribute("opacity", "1");
-      dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("opacity", "1");
-      showTooltip(touch, `<strong>${fmtKr(data[i][1])}</strong><br>${data[i][0]}`);
+      dotA.setAttribute("cx", px); dotA.setAttribute("cy", py); dotA.setAttribute("opacity", "1");
+      let html = `<div class="t-date">${stb[iA][0]}</div><div style="color:var(--acc)">Storebrand: ${kr(stb[iA][1])}</div>`;
+      if (comparing) {
+        const iB = Math.round(f * (sB.length - 1));
+        dotB.setAttribute("cx", px); dotB.setAttribute("cy", y(sB[iB])); dotB.setAttribute("opacity", "1");
+        html += `<div style="color:var(--peer)">${PEER_SHORT[cmp]}: ${kr(comparing[iB][1])}</div>`;
+      } else { dotB.setAttribute("opacity", "0"); }
+      showTip(t, html);
     }
-    function leave() { vline.setAttribute("opacity", "0"); dot.setAttribute("opacity", "0"); hideTooltip(); }
     overlay.addEventListener("mousemove", move);
-    overlay.addEventListener("mouseleave", leave);
-    overlay.addEventListener("touchstart", move, { passive: true });
+    overlay.addEventListener("mouseleave", () => { vline.setAttribute("opacity", "0"); dotA.setAttribute("opacity", "0"); dotB.setAttribute("opacity", "0"); hideTip(); });
     overlay.addEventListener("touchmove", move, { passive: true });
-    overlay.addEventListener("touchend", leave);
+    overlay.addEventListener("touchend", () => { vline.setAttribute("opacity", "0"); dotA.setAttribute("opacity", "0"); dotB.setAttribute("opacity", "0"); hideTip(); });
 
-    // performance summary
-    const first = vals[0], last = vals[vals.length - 1];
-    const chg = ((last / first) - 1) * 100;
-    const sumEl = document.getElementById("price-range-perf");
-    sumEl.textContent = `${currentRange}: ${fmtPctShort(chg)}`;
-    sumEl.className = "range-perf " + (chg >= 0 ? "up" : "down");
+    // perf + legend
+    const chg = ((sA[sA.length - 1] / (comparing ? 100 : sA[0])) - 1) * 100;
+    const stbChg = ((stb[stb.length - 1][1] / stb[0][1]) - 1) * 100;
+    const perfEl = document.getElementById("chart-perf");
+    perfEl.textContent = pct1(stbChg);
+    perfEl.className = "perf " + (stbChg >= 0 ? "up" : "down");
+    const leg = document.getElementById("cmp-legend");
+    if (comparing) {
+      leg.hidden = false;
+      leg.innerHTML = `<span style="color:var(--acc)">— Storebrand</span><span style="color:var(--peer)">— ${PEER_SHORT[cmp]}</span><span style="color:var(--mut)">Indeksert, 100 = periodestart</span>`;
+    } else { leg.hidden = true; }
   }
-
-  // range buttons
-  const btns = document.querySelectorAll("#price-range-buttons button");
-  btns.forEach(b => {
-    b.addEventListener("click", () => {
-      currentRange = b.dataset.range;
-      btns.forEach(x => x.classList.toggle("active", x === b));
-      draw();
-    });
-  });
-  window._redrawPriceChart = draw;
   draw();
 }
 
-/* ---------- 52-week range meter ---------- */
+/* ---------- 52-ukers meter ---------- */
 function renderRangeMeter() {
-  const q = STB_DATA.quote;
-  const track = document.getElementById("range-track");
-  const pct = v => ((v - q.week52Low) / (q.week52High - q.week52Low)) * 100;
-  const currentPct = Math.max(0, Math.min(100, pct(q.price)));
+  const q = STB_DATA.quote, m = document.getElementById("range-meter");
+  const p = (v) => Math.max(0, Math.min(100, ((v - q.week52Low) / (q.week52High - q.week52Low)) * 100));
+  const cur = p(q.price), tgt = p(q.analystTarget);
+  m.appendChild(h(`<div class="fill grad" style="width:${cur}%"></div>`));
+  m.appendChild(h(`<div class="tick" style="left:${cur}%;background:var(--tx)"></div>`));
+  m.appendChild(h(`<div class="flag" style="left:${cur}%;top:-24px">${kr(q.price, 0)}</div>`));
+  m.appendChild(h(`<div class="tick" style="left:${tgt}%;background:var(--peer)"></div>`));
+  m.appendChild(h(`<div class="flag" style="left:${tgt}%;top:16px;color:var(--peer)">Mål ${kr(q.analystTarget, 0)}</div>`));
+  document.getElementById("range-low").textContent = nf0.format(q.week52Low);
+  document.getElementById("range-high").textContent = nf0.format(q.week52High);
+}
 
-  const fill = document.createElement("div");
-  fill.className = "meter-fill";
-  fill.style.width = currentPct + "%";
-  track.appendChild(fill);
+/* ---------- Prediksjonsgraf (enkel trendmodell fra ekte månedsdata) ---------- */
+const MND = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"];
+function renderPrediction() {
+  const svg = document.getElementById("pred-chart");
+  const monthly = STB_PRICES.max.slice(-12); // [ "YYYY-MM", pris ]
+  const n = monthly.length;
+  const prices = monthly.map((d) => d[1]);
+  // lineær regresjon
+  const xs = prices.map((_, i) => i);
+  const mx = xs.reduce((a, b) => a + b, 0) / n, my = prices.reduce((a, b) => a + b, 0) / n;
+  let num = 0, den = 0;
+  xs.forEach((x, i) => { num += (x - mx) * (prices[i] - my); den += (x - mx) ** 2; });
+  const slope = num / den, intercept = my - slope * mx;
+  const model = xs.map((x) => slope * x + intercept);
+  // avvik
+  const resid = prices.map((p, i) => p - model[i]);
+  const madPct = (resid.reduce((a, r, i) => a + Math.abs(r) / prices[i], 0) / n) * 100;
+  const sigma = Math.sqrt(resid.reduce((a, r) => a + r * r, 0) / n);
+  // anslag neste måned – trend justert mot analytikernes kursmål
+  const trendFwd = slope * n + intercept;
+  const fwd = 0.7 * trendFwd + 0.3 * STB_DATA.quote.analystTarget;
+  const lo = fwd - 1.5 * sigma, hi = fwd + 1.5 * sigma;
 
-  const marker = document.createElement("div");
-  marker.className = "meter-current";
-  marker.style.left = currentPct + "%";
-  marker.title = `Dagens kurs: ${fmtKr(q.price)}`;
-  track.appendChild(marker);
+  const all = [...prices, fwd, lo, hi];
+  let yMin = Math.min(...all), yMax = Math.max(...all);
+  const padY = (yMax - yMin) * 0.1 || 1; yMin -= padY; yMax += padY;
+  const PADL = 48, XR = 784, TOP = 14, BOT = 234;
+  const X = (i) => PADL + (i / n) * (XR - PADL); // 0..n (n = fwd)
+  const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
 
-  if (q.analystTarget >= q.week52Low && q.analystTarget <= q.week52High) {
-    const target = document.createElement("div");
-    target.className = "meter-target";
-    target.style.left = pct(q.analystTarget) + "%";
-    target.title = `Analytikernes kursmål: ${fmtKr(q.analystTarget)}`;
-    track.appendChild(target);
+  for (let s = 0; s <= 4; s++) {
+    const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v);
+    svg.appendChild(el("line", { x1: PADL, x2: XR, y1: yy, y2: yy, class: "chart-grid" }));
+    svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, nf0.format(v)));
   }
-  document.getElementById("range-low").textContent = fmtKr(q.week52Low);
-  document.getElementById("range-high").textContent = fmtKr(q.week52High);
-}
-
-/* ---------- Generic vertical column chart ---------- */
-function columnChart(svg, items, opts) {
-  // items: [{label, value, accent?, sub?}]
-  while (svg.firstChild) svg.removeChild(svg.firstChild);
-  const width = 640, height = opts.height || 240;
-  const padL = 44, padR = 16, padT = 24, padB = 34;
-  const innerW = width - padL - padR, innerH = height - padT - padB;
-  const maxVal = Math.max(...items.map(d => d.value)) * 1.15 || 1;
-  const colW = innerW / items.length;
-  const barW = Math.min(opts.barW || 34, colW * 0.55);
-
-  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  svg.classList.add("chart-svg");
-
-  [0, 0.5, 1].forEach(f => {
-    const yy = padT + innerH * (1 - f);
-    svg.appendChild(el("line", { x1: padL, x2: width - padR, y1: yy, y2: yy, class: "chart-gridline" }));
+  monthly.forEach((d, i) => {
+    if (i % 2 === 0 || i === n - 1) {
+      const [yy, mm] = d[0].split("-");
+      svg.appendChild(el("text", { x: X(i), y: 254, "text-anchor": "middle", class: "chart-axis" }, MND[+mm - 1]));
+    }
   });
+  // "i dag"
+  svg.appendChild(el("line", { x1: X(n - 1), x2: X(n - 1), y1: TOP, y2: BOT, stroke: "var(--mut)", "stroke-width": "1", "stroke-dasharray": "2,4" }));
+  svg.appendChild(el("text", { x: X(n - 1), y: 26, "text-anchor": "middle", class: "chart-axis" }, "i dag"));
+  // usikkerhetsbånd (fra siste faktiske til anslag)
+  svg.appendChild(el("path", { d: `M ${X(n - 1)} ${Y(prices[n - 1])} L ${X(n)} ${Y(hi)} L ${X(n)} ${Y(lo)} Z`, fill: "var(--peer)", "fill-opacity": "0.14", stroke: "none" }));
+  // modell (stiplet)
+  let md = ""; model.forEach((v, i) => { md += (i ? " L " : "M ") + X(i) + " " + Y(v); });
+  md += ` L ${X(n)} ${Y(fwd)}`;
+  svg.appendChild(el("path", { d: md, fill: "none", stroke: "var(--peer)", "stroke-width": "2", "stroke-dasharray": "6,4" }));
+  // faktisk
+  let ad = ""; prices.forEach((v, i) => { ad += (i ? " L " : "M ") + X(i) + " " + Y(v); });
+  svg.appendChild(el("path", { d: ad, fill: "none", stroke: "var(--acc)", "stroke-width": "2.2" }));
+  svg.appendChild(el("circle", { cx: X(n - 1), cy: Y(prices[n - 1]), r: 4.5, fill: "var(--acc)" }));
+  svg.appendChild(el("circle", { cx: X(n), cy: Y(fwd), r: 4.5, fill: "var(--peer)" }));
+  svg.appendChild(el("text", { x: X(n) - 6, y: Y(fwd) - 8, "text-anchor": "end", class: "chart-axis", fill: "var(--peer)", "font-weight": "600" }, kr(fwd, 0)));
 
-  items.forEach((d, i) => {
-    const cx = padL + colW * i + colW / 2;
-    const barH = Math.max((d.value / maxVal) * innerH, 2);
-    const x = cx - barW / 2;
-    const y = padT + innerH - barH;
-    const cls = "chart-bar" + (d.accent ? " accent" : "");
+  // neste måned-label
+  const lastMonth = monthly[n - 1][0].split("-").map(Number);
+  let nm = lastMonth[1], ny = lastMonth[0];
+  nm++; if (nm > 12) { nm = 1; ny++; }
+  document.getElementById("pred-mad").textContent = `Gj.sn. avvik siste 12 mnd: ±${nf1.format(madPct)} %`;
+  document.getElementById("pred-note").innerHTML =
+    `Modellanslag ${MND[nm - 1]} ${ny}: <span class="mono" style="color:var(--tx)">${kr(fwd, 0)}</span> (intervall ${nf0.format(lo)}–${nf0.format(hi)} kr). Dette er en enkel statistisk modell for illustrasjon — ikke en prognose du bør handle på.`;
+}
 
-    const rect = el("rect", { x, y, width: barW, height: barH, rx: 4, ry: 4, class: cls, tabindex: "0", role: "img", "aria-label": `${d.label}: ${opts.fmt(d.value)}` });
-    const sq = el("rect", { x, y: padT + innerH - 5, width: barW, height: 5, class: cls });
-    const tip = e => showTooltip(e, `<strong>${d.label}</strong><br>${opts.fmt(d.value)}${d.sub ? "<br>" + d.sub : ""}`);
-    rect.addEventListener("mousemove", tip);
-    rect.addEventListener("mouseenter", tip);
-    rect.addEventListener("mouseleave", hideTooltip);
-    svg.appendChild(rect); svg.appendChild(sq);
-
-    const vl = el("text", { x: cx, y: y - 8, "text-anchor": "middle", class: "chart-value-text" });
-    vl.textContent = opts.labelFmt ? opts.labelFmt(d.value) : opts.fmt(d.value);
-    svg.appendChild(vl);
-
-    const al = el("text", { x: cx, y: height - 10, "text-anchor": "middle", class: "chart-axis-text" });
-    al.textContent = d.label;
-    svg.appendChild(al);
+/* ---------- Selskap + segmenter ---------- */
+function renderCompany() {
+  document.getElementById("company-desc").textContent = STB_DATA.company.description;
+  const subs = document.getElementById("company-subs");
+  STB_DATA.company.subsidiariesDetailed.forEach((c) => {
+    subs.appendChild(h(`<div class="tickline"><span class="mk">▸</span><div><span style="font-weight:600">${c.name}</span><span class="desc"> — ${c.desc}</span></div></div>`));
   });
-}
-
-/* ---------- Dividend chart ---------- */
-function renderDividendChart() {
-  const data = STB_DATA.dividends;
-  columnChart(document.getElementById("dividend-chart"),
-    data.map(d => ({ label: String(d.year), value: d.amount, accent: true, sub: d.amount === 0 ? "Utbytte kuttet (covid-19)" : "per aksje" })),
-    { fmt: v => fmtKr(v), labelFmt: v => nf2.format(v), height: 240, barW: 26 });
-
-  const tbody = document.getElementById("dividend-table-body");
-  data.forEach(d => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${d.year}</td><td class="num">${d.amount === 0 ? "0,00 kr" : fmtKr(d.amount)}</td><td class="num">${d.exDate}</td><td class="num">${d.payDate}</td>`;
-    tbody.appendChild(tr);
+  const segs = STB_DATA.segments, maxV = Math.max(...segs.map((s) => s.value));
+  document.getElementById("segment-sub").textContent = "Q2 2026, millioner kroner — hvor pengene tjenes";
+  const bars = document.getElementById("segment-bars");
+  segs.forEach((s) => {
+    bars.appendChild(h(`<div class="seg-row"><div class="seg-head"><span>${s.name}${s.growth ? ' <span style="color:var(--mut)">' + s.growth + "</span>" : ""}</span><span class="mono">${nf0.format(s.value)}</span></div><div class="seg-track"><div class="seg-fill" style="width:${(s.value / maxV) * 100}%"></div></div></div>`));
   });
-  const ds = STB_DATA.dividendStats;
-  document.getElementById("div-yield").textContent = nf2.format(ds.yield) + " %";
-  document.getElementById("div-payout").textContent = nf2.format(ds.payoutRatio) + " %";
-  document.getElementById("div-growth").textContent = fmtPct(ds.oneYearGrowthPct);
+  const sum = segs.reduce((a, s) => a + s.value, 0);
+  document.getElementById("segment-sum").textContent = `Sum driftsresultat Q2 2026: ${nf0.format(sum)} mill. (+17 % å/å)`;
 }
 
-/* ---------- Segment + AUM charts ---------- */
-function renderSegments() {
-  const s = STB_DATA.segments;
-  columnChart(document.getElementById("segment-chart"),
-    s.map(d => ({ label: d.name, value: d.value, accent: true, sub: d.growth ? "Vekst " + d.growth : null })),
-    { fmt: v => nf0.format(v) + " mill. kr", labelFmt: v => nf0.format(v), height: 240, barW: 40 });
-}
-function renderAum() {
-  const a = STB_DATA.aumHistory;
-  columnChart(document.getElementById("aum-chart"),
-    a.map((d, i) => ({ label: String(d.year), value: d.value, accent: i === a.length - 1 })),
-    { fmt: v => nf0.format(v) + " mrd kr", labelFmt: v => nf0.format(v), height: 240, barW: 34 });
+/* ---------- Utbytte ---------- */
+function renderDividends() {
+  const divs = STB_DATA.dividends, maxA = Math.max(...divs.map((d) => d.amount));
+  const bars = document.getElementById("div-bars");
+  divs.forEach((d) => {
+    const hpx = d.amount === 0 ? 3 : Math.round((d.amount / maxA) * 140);
+    const isCut = d.amount === 0;
+    bars.appendChild(h(`<div class="colbar"><span class="amt" style="color:${isCut ? "var(--down)" : "var(--tx)"}">${isCut ? "0" : nf2.format(d.amount)}</span><div class="bar" style="height:${hpx}px;background:${isCut ? "var(--down)" : "var(--acc)"}"></div><span class="yr">${d.year}</span></div>`));
+  });
+  const st = STB_DATA.dividendStats;
+  const stats = [["Direkteavkastning", nf2.format(STB_DATA.quote.dividendYield) + " %"], ["Utdelingsgrad", nf0.format(st.payoutRatio) + " %"], ["Vekst siste år", pct1(st.oneYearGrowthPct)]];
+  const g = document.getElementById("div-stats");
+  stats.forEach(([l, v]) => g.appendChild(h(`<div class="ministat"><div class="label">${l}</div><div class="val">${v}</div></div>`)));
+
+  const tbody = document.getElementById("div-table-body");
+  divs.forEach((d) => tbody.appendChild(h(`<tr><td class="mono">${d.year}</td><td class="num">${d.amount === 0 ? "0,00 kr" : kr(d.amount)}</td><td class="num" style="color:var(--mut)">${d.exDate}</td><td class="num" style="color:var(--mut)">${d.payDate}</td></tr>`)));
+  const btn = document.getElementById("div-toggle"), wrap = document.getElementById("div-table-wrap");
+  btn.addEventListener("click", () => { const s = wrap.hidden; wrap.hidden = !s; btn.textContent = s ? "Skjul tabell" : "Vis tabell"; });
 }
 
-/* ---------- KPI + targets ---------- */
-function renderKpis() {
+/* ---------- Nøkkeltall / solvens / AUM / mål ---------- */
+function renderKeyFigures() {
   const k = STB_DATA.kpis;
-  const tiles = [
-    ["Solvensmargin (Q2 2026)", k.solvency + " %", `Mål: minst ${k.solvencyTarget} %`],
-    ["Combined ratio (Q2)", k.combinedRatioQ + " %", "Under 100 % = lønnsom drift"],
-    ["Egenkapitalavkastning", k.roeTtm + " %", `Kontant-ROE annualisert: ${k.roeCashAnnualized} %`],
-    ["Forvaltningskapital", nf0.format(k.aum) + " mrd kr", "Rekordnivå"],
-    ["Markedsandel skade (privat)", nf1.format(k.retailPcMarketShare) + " %", "Opp fra 7,5 %"],
-    ["Beta", nf2.format(STB_DATA.quote.beta), "Mindre svingete enn markedet"],
-  ];
-  const grid = document.getElementById("kpi-grid");
-  tiles.forEach(([label, value, sub]) => {
-    const tile = document.createElement("div");
-    tile.className = "stat-tile";
-    tile.innerHTML = `<div class="label">${label}</div><div class="value">${value}</div><div class="tile-sub">${sub}</div>`;
-    grid.appendChild(tile);
+  document.getElementById("solvency-num").textContent = k.solvency + " %";
+  document.getElementById("solvency-sub").textContent = "Solid buffer per Q2 2026";
+  const meter = document.getElementById("solvency-meter");
+  const scale = 250; // 0–250 % skala
+  meter.appendChild(h(`<div class="fill up" style="width:${(k.solvency / scale) * 100}%"></div>`));
+  meter.appendChild(h(`<div class="tick" style="left:${(175 / scale) * 100}%;background:var(--down)"></div>`));
+  meter.appendChild(h(`<div class="flag" style="left:${(175 / scale) * 100}%;top:18px;color:var(--down)">175 % terskel</div>`));
+
+  const stats = [["Combined ratio", k.combinedRatioQ + " %"], ["Egenkapitalavk.", k.roeTtm + " %"], ["Kontant-ROE", k.roeCashAnnualized + " %"], ["Markedsandel skade", nf1.format(k.retailPcMarketShare) + " %"]];
+  const g = document.getElementById("key-stats");
+  stats.forEach(([l, v]) => g.appendChild(h(`<div class="ministat"><div class="label">${l}</div><div class="val">${v}</div></div>`)));
+
+  const aum = STB_DATA.aumHistory, maxAum = Math.max(...aum.map((a) => a.value));
+  const ab = document.getElementById("aum-bars");
+  aum.forEach((a) => {
+    const hpx = Math.round((a.value / maxAum) * 110);
+    ab.appendChild(h(`<div class="colbar"><span class="amt">${nf0.format(a.value)}</span><div class="bar" style="height:${hpx}px;background:color-mix(in srgb, var(--acc) 70%, var(--sf2))"></div><span class="yr">${a.year}</span></div>`));
   });
 
-  const t = STB_DATA.targets;
-  document.getElementById("targets-note").textContent = t.note;
-  const tg = document.getElementById("targets-grid");
-  t.items.forEach(it => {
-    const row = document.createElement("div");
-    row.className = "target-row";
-    row.innerHTML = `<span class="target-v">${it.value}</span><span class="target-l">${it.label}</span>`;
-    tg.appendChild(row);
-  });
-  document.getElementById("dividend-policy").textContent = t.dividendPolicy;
+  const t = STB_DATA.targets, list = document.getElementById("targets-list");
+  t.items.forEach((it) => list.appendChild(h(`<div class="goalline"><span class="mk">▸</span><span>${it.label}: <strong>${it.value}</strong></span></div>`)));
+  list.appendChild(h(`<div class="goalline"><span class="mk">▸</span><span style="color:var(--mut)">${t.dividendPolicy}</span></div>`));
 }
 
-/* ---------- Horizontal peer comparison ---------- */
-function renderPeerChart(svgId, valueKey, valueLabelFn) {
-  const data = STB_DATA.peers;
-  const svg = document.getElementById(svgId);
-  while (svg.firstChild) svg.removeChild(svg.firstChild);
-  const rowH = 40, barH = 20, width = 640;
-  const padL = 150, padR = 66, padT = 10;
-  const height = padT + rowH * data.length + 10;
-  const innerW = width - padL - padR;
-  const maxVal = Math.max(...data.map(d => d[valueKey])) * 1.15;
-
-  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  svg.classList.add("chart-svg");
-
-  data.forEach((d, i) => {
-    const y = padT + rowH * i + (rowH - barH) / 2;
-    const barLen = Math.max((d[valueKey] / maxVal) * innerW, 2);
-
-    const nameLabel = el("text", { x: padL - 10, y: y + barH / 2 + 4, "text-anchor": "end", class: "chart-axis-text", style: d.isSubject ? "font-weight:700;" : "" });
-    nameLabel.textContent = d.name;
-    svg.appendChild(nameLabel);
-
-    const cls = "chart-bar" + (d.isSubject ? " accent" : "");
-    const rect = el("rect", { x: padL, y, width: barLen, height: barH, rx: 4, ry: 4, class: cls, tabindex: "0", role: "img", "aria-label": `${d.name}: ${valueLabelFn(d[valueKey])}` });
-    const sq = el("rect", { x: padL, y, width: 5, height: barH, class: cls });
-    const tip = e => showTooltip(e, `<strong>${d.name}</strong><br>${valueLabelFn(d[valueKey])}`);
-    rect.addEventListener("mousemove", tip);
-    rect.addEventListener("mouseenter", tip);
-    rect.addEventListener("mouseleave", hideTooltip);
-    svg.appendChild(rect); svg.appendChild(sq);
-
-    const vl = el("text", { x: padL + barLen + 8, y: y + barH / 2 + 4, class: "chart-value-text" });
-    vl.textContent = valueLabelFn(d[valueKey]);
-    svg.appendChild(vl);
-  });
-
-  const tbody = document.getElementById("peer-table-body");
-  if (tbody && tbody.childElementCount === 0) {
-    data.forEach(d => {
-      const tr = document.createElement("tr");
-      if (d.isSubject) tr.className = "subject";
-      tr.innerHTML = `
-        <td>${d.name} <span class="chart-axis-text">(${d.ticker})</span></td>
-        <td class="num">${nf2.format(d.price)} ${d.currency}</td>
-        <td class="num">${nf1.format(d.marketCap)} mrd ${d.currency}</td>
-        <td class="num">${nf2.format(d.pe)}</td>
-        <td class="num">${nf2.format(d.dividendYield)} %</td>
-        <td class="num">${d.oneYearPct === null ? "–" : fmtPctShort(d.oneYearPct)}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
-}
-
-/* ---------- Reports ---------- */
+/* ---------- Rapporter ---------- */
 function renderReports() {
   const r = STB_DATA.reports;
-  document.getElementById("report-period").textContent = r.latest.period;
-  document.getElementById("report-date").textContent = r.latest.reportDate;
-  const ul = document.getElementById("report-highlights");
-  r.latest.highlights.forEach(h => { const li = document.createElement("li"); li.textContent = h; ul.appendChild(li); });
+  document.getElementById("reports-lead").textContent = `Siste rapportering: ${r.latest.period}, publisert ${r.latest.reportDate}. Se storebrand.no/ir for fullstendige tall.`;
+  document.getElementById("highlights-title").textContent = "Høydepunkter " + r.latest.period;
+  const hi = document.getElementById("report-highlights");
+  r.latest.highlights.forEach((txt) => hi.appendChild(h(`<div class="kv-row"><span class="k">${txt}</span></div>`)));
   const cal = document.getElementById("report-calendar");
-  r.calendar.forEach(c => {
-    const row = document.createElement("div");
-    row.className = "calendar-row";
-    row.innerHTML = `<span>${c.label}</span><span class="status${c.status === "Publisert" ? " done" : ""}">${c.date} · ${c.status}</span>`;
-    cal.appendChild(row);
-  });
+  r.calendar.forEach((c) => cal.appendChild(h(`<div class="cal-row"><span class="date">${c.date}</span><span>${c.label} · ${c.status}</span></div>`)));
   const links = document.getElementById("report-links");
-  r.links.forEach(l => {
-    const a = document.createElement("a");
-    a.href = l.url; a.target = "_blank"; a.rel = "noopener";
-    a.textContent = l.label + " ↗";
-    links.appendChild(a);
-  });
+  r.links.forEach((l) => { const a = document.createElement("a"); a.href = l.url; a.target = "_blank"; a.rel = "noopener"; a.className = "src-pill"; a.textContent = l.label + " ↗"; links.appendChild(a); });
 }
 
-/* ---------- Insiders ---------- */
+/* ---------- Innsidehandel / tilbakekjøp / eierstruktur ---------- */
 function renderInsiders() {
-  const data = STB_DATA.insiders;
-  document.getElementById("insider-note").textContent = data.note;
-  const tbody = document.getElementById("insider-table-body");
-  data.transactions.forEach(t => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${t.date}</td><td>${t.name}</td><td>${t.type}</td>
-      <td class="num">${nf0.format(t.shares)}</td>
-      <td class="num">${fmtKr(t.price)}</td>
-      <td class="num">${nf0.format(t.shares * t.price)} kr</td>`;
-    tbody.appendChild(tr);
+  const d = STB_DATA.insiders;
+  document.getElementById("insider-lead").textContent = d.note;
+  const tb = document.getElementById("insider-table-body");
+  d.transactions.forEach((t) => {
+    const val = t.shares * t.price;
+    const typeCell = t.type === "Kjøp" ? '<span class="tag-buy">KJØP</span>' : t.type;
+    tb.appendChild(h(`<tr><td class="mono" style="color:var(--mut)">${t.date}</td><td>${t.name}</td><td>${typeCell}</td><td class="num">${nf0.format(t.shares)}</td><td class="num">${nf0.format(t.price)}</td><td class="num">${nf0.format(val)}</td></tr>`));
   });
-  document.getElementById("buyback-desc").textContent = data.buyback.description;
-  document.getElementById("buyback-treasury").textContent = data.buyback.treasurySharesNote;
+  document.getElementById("buyback-text").textContent = d.buyback.description;
+  const bm = document.getElementById("buyback-meter");
+  bm.appendChild(h(`<div class="fill" style="width:50%"></div>`));
+
+  const own = STB_DATA.ownershipBreakdown, ob = document.getElementById("ownership-bars");
+  own.forEach((o) => ob.appendChild(h(`<div class="seg-row"><div class="seg-head"><span>${o.name}</span><span class="mono" style="color:var(--mut)">${o.pct} %</span></div><div class="seg-track"><div class="seg-fill" style="width:${o.pct}%;background:var(--peer)"></div></div></div>`)));
   document.getElementById("ownership-note").textContent = STB_DATA.ownership.note;
 }
 
-/* ---------- News ---------- */
-const TAG_LABEL = { positivt: "positivt", risiko: "risiko", folgemedpaa: "å følge med på" };
+/* ---------- Sammenligning ---------- */
+function renderComparison() {
+  const peers = STB_DATA.peers;
+  const peBars = document.getElementById("pe-bars"), yBars = document.getElementById("yield-bars");
+  const maxPe = Math.max(...peers.map((p) => p.pe)), maxY = Math.max(...peers.map((p) => p.dividendYield));
+  peers.forEach((p) => {
+    const col = p.isSubject ? "var(--acc)" : "var(--mut)", fw = p.isSubject ? 700 : 500;
+    peBars.appendChild(h(`<div class="bar-row"><span style="font-weight:${fw}">${shortName(p.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${(p.pe / maxPe) * 100}%;background:${col}"></div></div><span class="bar-val">${nf1.format(p.pe)}</span></div>`));
+    yBars.appendChild(h(`<div class="bar-row"><span style="font-weight:${fw}">${shortName(p.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${(p.dividendYield / maxY) * 100}%;background:${p.isSubject ? "var(--acc)" : "var(--peer)"}"></div></div><span class="bar-val">${nf1.format(p.dividendYield)} %</span></div>`));
+  });
+  const tb = document.getElementById("cmp-table-body");
+  peers.forEach((p) => {
+    const yr = p.oneYearPct == null ? "–" : pct1(p.oneYearPct);
+    const yrCol = p.oneYearPct == null ? "var(--mut)" : p.oneYearPct >= 0 ? "var(--up)" : "var(--down)";
+    tb.appendChild(h(`<tr class="${p.isSubject ? "subject" : ""}"><td style="font-weight:${p.isSubject ? 700 : 400}">${p.name}</td><td class="num">${nf1.format(p.price)} ${p.currency}</td><td class="num" style="color:var(--mut)">${nf0.format(p.marketCap)} mrd</td><td class="num">${nf1.format(p.pe)}</td><td class="num">${nf1.format(p.dividendYield)} %</td><td class="num" style="color:${yrCol}">${yr}</td></tr>`));
+  });
+}
+const shortName = (n) => n.split(" ")[0];
+
+/* ---------- Nyheter ---------- */
+const NEWS_DATE = { positivt: "Nyhet", risiko: "Risiko", folgemedpaa: "Følg med" };
 function renderNews() {
-  const grid = document.getElementById("news-grid");
-  STB_DATA.news.forEach(n => {
-    const card = document.createElement("div");
-    card.className = "news-item";
-    card.innerHTML = `
-      <span class="tag ${n.tag}"><span class="dot"></span>${TAG_LABEL[n.tag] || n.tag}</span>
-      <h3>${n.title}</h3><p>${n.body}</p>`;
-    grid.appendChild(card);
+  const list = document.getElementById("news-list");
+  STB_DATA.news.forEach((n) => {
+    list.appendChild(h(`<div class="news-row ${n.tag}"><span class="ndate">${NEWS_DATE[n.tag] || ""}</span><div class="nbody"><div class="ntitle">${n.title}</div><div class="ntext">${n.body}</div></div></div>`));
   });
 }
 
-/* ---------- Sources ---------- */
+/* ---------- Kilder ---------- */
 function renderSources() {
-  const ol = document.getElementById("sources-list");
-  STB_DATA.sources.forEach(s => {
-    const li = document.createElement("li");
-    li.innerHTML = `<a href="${s.url}" target="_blank" rel="noopener">${s.label}</a>`;
-    ol.appendChild(li);
-  });
   document.getElementById("footer-updated").textContent = STB_DATA.meta.updated;
+  const list = document.getElementById("sources-list");
+  STB_DATA.sources.forEach((s) => { const a = document.createElement("a"); a.href = s.url; a.target = "_blank"; a.rel = "noopener"; a.className = "src-pill"; a.textContent = s.label; list.appendChild(a); });
 }
 
+renderNav();
 renderHeader();
-renderHero();
-renderCompany();
+renderStats();
 renderPriceChart();
 renderRangeMeter();
-renderDividendChart();
-renderSegments();
-renderAum();
-renderKpis();
-renderPeerChart("pe-chart", "pe", v => nf2.format(v));
-renderPeerChart("yield-chart", "dividendYield", v => nf2.format(v) + " %");
+renderPrediction();
+renderCompany();
+renderDividends();
+renderKeyFigures();
 renderReports();
 renderInsiders();
+renderComparison();
 renderNews();
 renderSources();

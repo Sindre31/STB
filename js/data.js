@@ -21,9 +21,23 @@ const STB_DATA = {
     employees: "2 541 årsverk (2025)",
     markets: "Norge og Sverige",
     subsidiaries: ["Storebrand Livsforsikring", "SPP (Sverige)", "Storebrand Asset Management", "SKAGEN Fondene", "Storebrand Bank", "Kron"],
+    subsidiariesDetailed: [
+      { name: "Storebrand Livsforsikring", desc: "pensjon og livsforsikring i Norge" },
+      { name: "SPP", desc: "livsforsikring og tjenestepensjon i Sverige" },
+      { name: "Storebrand Asset Management", desc: "kapitalforvaltning – Norges største private forvalter" },
+      { name: "SKAGEN Fondene", desc: "aktivt forvaltede aksje- og rentefond" },
+      { name: "Storebrand Bank", desc: "bank- og sparetjenester til privatkunder" },
+      { name: "Kron", desc: "digital spare- og fondsplattform" },
+    ],
     description:
-      "Storebrand tilbyr pensjon, sparing, bank og forsikring til privatpersoner, bedrifter og offentlig sektor. Inntjeningen kombinerer volumbaserte forvaltningshonorarer (en andel av forvaltningskapitalen) med risikobaserte inntekter fra forsikring. Folketrygdfondet er største aksjonær med rundt 11 %.",
+      "Storebrand (grunnlagt 1767, hovedkontor på Lysaker) er blant Nordens ledende innen livsforsikring og pensjon, og Norges største private kapitalforvalter med rundt 1 660 mrd. kroner til forvaltning og over to millioner kunder i Norge og Sverige. Inntjeningen kombinerer volumbaserte forvaltningshonorarer med risikobaserte inntekter fra forsikring. Folketrygdfondet er største aksjonær med rundt 11 %.",
   },
+
+  // Eierstruktur – kun det som er offentlig kjent presenteres som eksakt.
+  ownershipBreakdown: [
+    { name: "Folketrygdfondet", pct: 11 },
+    { name: "Øvrige og frittflytende aksjonærer", pct: 89 },
+  ],
 
   quote: {
     price: 198.80,

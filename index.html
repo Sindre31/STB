@@ -4,202 +4,233 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Storebrand (STB) – Aksjeoversikt</title>
-<meta name="description" content="Samlet oversikt over Storebrand-aksjen (STB): kurs og kurshistorikk, utbytte, kvartalsrapporter, segmenter, solvens, innsidehandel, sammenligning med lignende selskaper og nyheter som kan påvirke kursen.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232a78d6%22/><text x=%2250%22 y=%2268%22 font-size=%2256%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22sans-serif%22 font-weight=%22bold%22>S</text></svg>">
+<meta name="description" content="Samlet oversikt over Storebrand-aksjen (STB): kurs og historikk, prediksjon, utbytte, solvens, innsidehandel, sammenligning med lignende nordiske selskaper og nyheter som kan påvirke kursen.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230a0e13%22/><text x=%2250%22 y=%2270%22 font-size=%2262%22 text-anchor=%22middle%22 fill=%22%23d9a952%22 font-family=%22monospace%22 font-weight=%22bold%22>S</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <header class="site">
-  <div class="wrap">
-    <div class="site-top">
-      <div class="brand">
-        <span class="name">Storebrand</span>
-        <span class="ticker">STB · Oslo Børs</span>
-      </div>
-      <div class="live-price">
-        <span class="px" id="live-price-value">–</span>
-        <span class="chg" id="live-price-change"></span>
-      </div>
-      <button class="theme-toggle" id="theme-toggle" aria-label="Bytt fargetema">Mørkt</button>
+  <div class="site-top">
+    <div class="brand">
+      <span class="name">Storebrand</span>
+      <span class="ticker">STB · OSE</span>
     </div>
-    <nav class="tabs" aria-label="Seksjoner">
-      <a href="#oversikt">Oversikt</a>
-      <a href="#kurs">Kurshistorikk</a>
-      <a href="#selskap">Om selskapet</a>
-      <a href="#utbytte">Utbytte</a>
-      <a href="#nokkeltall">Nøkkeltall</a>
-      <a href="#rapporter">Rapporter</a>
-      <a href="#innsidehandel">Innsidehandel</a>
-      <a href="#sammenligning">Sammenligning</a>
-      <a href="#nyheter">Nyheter</a>
-      <a href="#kilder">Kilder</a>
-    </nav>
+    <div class="head-price">
+      <span class="px" id="head-price">–</span>
+      <span class="chg" id="head-change"></span>
+    </div>
+    <div class="head-spacer"></div>
+    <span class="head-updated" id="head-updated"></span>
+    <button class="theme-btn" id="theme-btn">Lyst tema</button>
   </div>
+  <nav class="tabs" id="nav-tabs"></nav>
 </header>
 
-<main class="wrap">
+<div class="stale-banner" id="stale-banner" role="status" hidden></div>
 
-  <div class="stale-banner" id="stale-banner" role="status" hidden></div>
+<section id="oversikt">
+  <div class="eyebrow">Oversikt</div>
+  <h1 class="title">Storebrand-aksjen — full oversikt</h1>
+  <p class="lead big">Kurs og historikk, prediksjon, utbytte, solvens, innsidehandel og sammenligning med lignende nordiske selskaper — samlet på ett sted, med ekte data som oppdateres automatisk.</p>
+  <div class="stats" id="stat-grid"></div>
+</section>
 
-  <section class="hero" id="oversikt">
-    <h1>Storebrand-aksjen (STB) – full oversikt</h1>
-    <p class="sub">Alt du trenger for å forstå Storebrand-aksjen på ett sted: kurs og historikk, utbytte, rapporter, segmenter, solvens, innsidehandel, sammenligning med lignende selskaper og hva som kan påvirke kursen.</p>
-
-    <div class="hero-figure">
-      <span class="value" id="hero-price">–</span>
-      <span class="delta" id="hero-delta"></span>
+<section id="kurs">
+  <div class="eyebrow">Kurshistorikk</div>
+  <h2 class="title">Kursutvikling</h2>
+  <p class="lead">Beveg pekeren over grafen for kurs og dato. Velg et selskap under for å sammenligne utviklingen — da vises begge indeksert til 100 ved periodestart.</p>
+  <div class="card">
+    <div class="chart-toolbar">
+      <div class="btn-row" id="period-buttons"></div>
+      <div class="vsep"></div>
+      <div class="pill-row" id="peer-buttons"><span class="lbl">Sammenlign:</span></div>
+      <div class="head-spacer"></div>
+      <span class="perf" id="chart-perf"></span>
     </div>
-    <div class="asof" id="hero-asof"></div>
-
-    <div class="stat-grid" id="stat-grid"></div>
-  </section>
-
-  <section class="card" id="kurs">
-    <div class="section-head">
-      <div>
-        <h2>Kurshistorikk</h2>
-        <p class="desc">Ekte historiske sluttkurser for STB på Oslo Børs. Beveg musepekeren (eller dra på mobil) over grafen for å se kurs og dato.</p>
-      </div>
-      <div class="range-controls">
-        <span class="range-perf" id="price-range-perf"></span>
-        <div class="btn-group" id="price-range-buttons" role="group" aria-label="Velg tidsrom">
-          <button data-range="1Y" class="active">1 år</button>
-          <button data-range="5Y">5 år</button>
-          <button data-range="MAX">Maks</button>
-        </div>
-      </div>
+    <svg id="price-chart" viewBox="0 0 800 320" role="img" aria-label="Kursgraf for Storebrand"></svg>
+    <div class="cmp-legend" id="cmp-legend" hidden></div>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <div class="card-title" style="margin-bottom:14px;">52-ukers kursspenn</div>
+    <div class="meter thin" id="range-meter" style="margin:26px 8px 30px;"></div>
+    <div style="display:flex;justify-content:space-between;" class="mono">
+      <span style="color:var(--mut);font-size:12px;">Lav: <span id="range-low"></span> kr</span>
+      <span style="color:var(--mut);font-size:12px;">Høy: <span id="range-high"></span> kr</span>
     </div>
-    <svg id="price-chart" role="img" aria-label="Linjediagram over Storebrand-kursen over tid"></svg>
-
-    <div class="meter-block" style="margin-top:22px;">
-      <h3 style="font-size:0.95rem; margin:0 0 10px;">52-ukers kursspenn</h3>
-      <div class="meter-labels">
-        <span id="range-low">–</span>
-        <span id="range-high">–</span>
-      </div>
-      <div class="meter-track" id="range-track"></div>
-      <div class="meter-legend">
-        <span><span class="dot" style="background:var(--series-1)"></span>Dagens kurs</span>
-        <span><span class="dot" style="background:var(--text-muted)"></span>Analytikernes kursmål</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="card" id="selskap">
-    <h2>Om selskapet</h2>
-    <p class="desc" id="company-desc"></p>
-    <div class="company-layout">
-      <div class="fact-list" id="company-facts"></div>
-      <div>
-        <div class="label" style="margin-bottom:8px;">Sentrale selskaper i konsernet</div>
-        <div class="chip-row" id="company-subs"></div>
-      </div>
-    </div>
-    <h3 style="font-size:1rem; margin:22px 0 6px;">Driftsresultat per segment (Q2 2026)</h3>
-    <p class="desc">Hvor pengene tjenes. Tall i millioner kroner.</p>
-    <svg id="segment-chart" role="img" aria-label="Søylediagram over driftsresultat per segment"></svg>
-  </section>
-
-  <section class="card" id="utbytte">
-    <h2>Utbyttehistorikk</h2>
-    <p class="desc">Storebrand betaler normalt utbytte én gang i året, i april. Utbyttet er trappet opp fra 1,55 kr (2017) til 5,40 kr (2026) — men ble kuttet til null i 2020 under covid-19, et eksempel på at utbytte ikke er garantert.</p>
-    <svg id="dividend-chart" role="img" aria-label="Søylediagram over utbytte per aksje"></svg>
-    <details class="data-table">
-      <summary>Vis utbyttedata som tabell</summary>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>År</th><th class="num">Utbytte / aksje</th><th class="num">Ex-dato</th><th class="num">Utbetalingsdato</th></tr></thead>
-          <tbody id="dividend-table-body"></tbody>
-        </table>
-      </div>
-    </details>
-    <div class="stat-grid" style="margin-top:18px;">
-      <div class="stat-tile"><div class="label">Direkteavkastning</div><div class="value small" id="div-yield"></div></div>
-      <div class="stat-tile"><div class="label">Utdelingsgrad</div><div class="value small" id="div-payout"></div></div>
-      <div class="stat-tile"><div class="label">Vekst siste år</div><div class="value small" id="div-growth"></div></div>
-    </div>
-  </section>
-
-  <section class="card" id="nokkeltall">
-    <h2>Nøkkeltall, solvens og finansielle mål</h2>
-    <p class="desc">For et forsikrings- og finanskonsern er solvensmargin (bufferkapital) og combined ratio (lønnsomhet i skadeforsikring) blant de viktigste tallene.</p>
-    <div class="stat-grid" id="kpi-grid"></div>
-
-    <h3 style="font-size:1rem; margin:24px 0 6px;">Vekst i forvaltningskapital (mrd kr)</h3>
-    <svg id="aum-chart" role="img" aria-label="Søylediagram over forvaltningskapital per år"></svg>
-
-    <h3 style="font-size:1rem; margin:24px 0 6px;">Finansielle mål og kapitalretur</h3>
-    <p class="desc" id="targets-note"></p>
-    <div class="targets-grid" id="targets-grid"></div>
-
-    <h3 style="font-size:1rem; margin:24px 0 6px;">Utbyttepolitikk</h3>
-    <p class="desc" id="dividend-policy"></p>
-  </section>
-
-  <section class="card" id="rapporter">
-    <h2>Kvartalsrapporter og resultater</h2>
-    <p class="desc">Siste rapportering: <strong id="report-period"></strong>, publisert <strong id="report-date"></strong>.</p>
-    <ul class="plain" id="report-highlights"></ul>
-    <h3 style="margin-top:22px; font-size:1rem;">Finanskalender</h3>
-    <div class="calendar-list" id="report-calendar"></div>
-    <div class="links-row" id="report-links"></div>
-  </section>
-
-  <section class="card" id="innsidehandel">
-    <h2>Innsidehandel og tilbakekjøp</h2>
-    <p class="desc" id="insider-note"></p>
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Dato</th><th>Person / gruppe</th><th>Type</th><th class="num">Antall aksjer</th><th class="num">Kurs</th><th class="num">Verdi</th></tr></thead>
-        <tbody id="insider-table-body"></tbody>
-      </table>
-    </div>
-    <h3 style="margin-top:22px; font-size:1rem;">Tilbakekjøp av egne aksjer</h3>
-    <p class="desc" id="buyback-desc"></p>
-    <p class="desc" id="buyback-treasury"></p>
-    <h3 style="margin-top:22px; font-size:1rem;">Eierstruktur</h3>
-    <p class="desc" id="ownership-note"></p>
-  </section>
-
-  <section class="card" id="sammenligning">
-    <h2>Sammenligning med lignende selskaper</h2>
-    <p class="desc">Storebrand sammenlignet med andre nordiske forsikrings- og finanskonsern: Gjensidige, Protector Forsikring, Tryg (Danmark) og Sampo (Finland). Selskapene handles i ulik valuta (NOK/DKK/EUR) — P/E og direkteavkastning er valutanøytrale nøkkeltall og derfor best egnet for direkte sammenligning.</p>
-
-    <h3 style="font-size:1rem;">P/E (pris/inntjening)</h3>
-    <svg id="pe-chart" role="img" aria-label="Søylediagram som sammenligner P/E for Storebrand og fire konkurrenter"></svg>
-
-    <h3 style="font-size:1rem; margin-top:24px;">Direkteavkastning (utbytte)</h3>
-    <svg id="yield-chart" role="img" aria-label="Søylediagram som sammenligner direkteavkastning"></svg>
-
-    <details class="data-table">
-      <summary>Vis alle nøkkeltall som tabell</summary>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Selskap</th><th class="num">Kurs</th><th class="num">Markedsverdi</th><th class="num">P/E</th><th class="num">Direkteavkastning</th><th class="num">1 år</th></tr></thead>
-          <tbody id="peer-table-body"></tbody>
-        </table>
-      </div>
-    </details>
-  </section>
-
-  <section class="card" id="nyheter">
-    <h2>Nyheter og faktorer som kan påvirke kursen</h2>
-    <p class="desc">En oversikt over det viktigste som skjer med Storebrand akkurat nå, og hva som er verdt å følge med på fremover.</p>
-    <div class="news-grid" id="news-grid"></div>
-  </section>
-
-</main>
-
-<footer class="site" id="kilder">
-  <div class="wrap">
-    <h2>Kilder og forbehold</h2>
-    <ol id="sources-list"></ol>
-    <div class="disclaimer">
-      <strong>Dette er ikke investeringsrådgivning.</strong> Tallene på denne siden er hentet fra offentlig tilgjengelige kilder sist oppdatert <span id="footer-updated"></span>, og kan avvike fra sanntidskurser og senere oppdaterte tall. Aksjekurser svinger kontinuerlig — sjekk alltid Oslo Børs, Storebrands egne børsmeldinger eller din megler for oppdaterte og nøyaktige tall før du tar investeringsbeslutninger.
+    <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--mut);">
+      <span><span style="color:var(--tx);">▮</span> Dagens kurs</span>
+      <span><span style="color:var(--peer);">▮</span> Analytikernes snittkursmål</span>
     </div>
   </div>
-</footer>
+</section>
+
+<section id="prediksjon">
+  <div class="eyebrow">Prediksjon</div>
+  <h2 class="title">Prediktert vs. faktisk kurs</h2>
+  <p class="lead">En enkel trendmodell (glidende trend justert mot analytikernes kursmål) sammenlignet med faktisk månedskurs siste 12 måneder — og modellens anslag én måned frem, med usikkerhetsintervall.</p>
+  <div class="card">
+    <div class="cmp-legend" style="margin-bottom:10px;">
+      <span style="color:var(--acc);">— Faktisk kurs</span>
+      <span style="color:var(--peer);">- - Modell</span>
+      <span style="color:var(--mut);">▒ Usikkerhet (neste mnd)</span>
+      <div class="head-spacer"></div>
+      <span style="color:var(--mut);" id="pred-mad"></span>
+    </div>
+    <svg id="pred-chart" viewBox="0 0 800 260" role="img" aria-label="Prediksjonsgraf"></svg>
+    <p style="margin:12px 0 0;font-size:12px;color:var(--mut);" id="pred-note"></p>
+  </div>
+</section>
+
+<section id="selskap">
+  <div class="eyebrow">Om selskapet</div>
+  <h2 class="title">Et nordisk spare- og forsikringskonsern</h2>
+  <p class="lead" id="company-desc"></p>
+  <div class="grid-auto">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">Sentrale selskaper i konsernet</div>
+      <div id="company-subs"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Driftsresultat per segment</div>
+      <div class="card-sub" id="segment-sub"></div>
+      <div class="bars" id="segment-bars"></div>
+      <div class="mono" style="margin-top:12px;font-size:12px;color:var(--mut);" id="segment-sum"></div>
+    </div>
+  </div>
+</section>
+
+<section id="utbytte">
+  <div class="eyebrow">Utbytte</div>
+  <h2 class="title">Utbyttehistorikk</h2>
+  <p class="lead">Storebrand betaler normalt utbytte én gang i året, i april. Utbyttet er trappet opp fra 1,55 kr (2017) til 5,40 kr (2026) — men ble kuttet til null i 2020 under covid-19, en påminnelse om at utbytte aldri er garantert.</p>
+  <div class="card">
+    <div class="colbars" id="div-bars" style="height:170px;"></div>
+    <div class="ministats" id="div-stats" style="margin-top:18px;"></div>
+    <button class="ghost-btn" id="div-toggle">Vis tabell</button>
+    <div class="table-scroll" id="div-table-wrap" hidden style="margin-top:12px;">
+      <table>
+        <thead><tr><th>År</th><th class="num">Utbytte / aksje</th><th class="num">Ex-dato</th><th class="num">Utbetaling</th></tr></thead>
+        <tbody id="div-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="nokkeltall">
+  <div class="eyebrow">Nøkkeltall</div>
+  <h2 class="title">Solvens og finansielle mål</h2>
+  <p class="lead">For et forsikrings- og finanskonsern er solvensmarginen (bufferkapitalen) det viktigste tallet: er den over 175 %, har Storebrand rom for tilbakekjøp av egne aksjer.</p>
+  <div class="grid-auto">
+    <div class="card">
+      <div class="card-title">Solvensmargin</div>
+      <div class="bignum up" id="solvency-num"></div>
+      <div class="card-sub" id="solvency-sub"></div>
+      <div class="meter" id="solvency-meter" style="margin-bottom:24px;"></div>
+      <div class="ministats two" id="key-stats"></div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <div class="card-title">Forvaltningskapital</div>
+        <div class="card-sub">Milliarder kroner</div>
+        <div class="colbars" id="aum-bars" style="height:130px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px;">Finansielle mål og utbyttepolitikk</div>
+        <div id="targets-list"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="rapporter">
+  <div class="eyebrow">Rapporter</div>
+  <h2 class="title">Kvartalsrapporter og finanskalender</h2>
+  <p class="lead" id="reports-lead"></p>
+  <div class="grid-auto">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;" id="highlights-title"></div>
+      <div id="report-highlights"></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">Finanskalender</div>
+      <div id="report-calendar"></div>
+      <div class="pills" id="report-links" style="margin-top:6px;"></div>
+    </div>
+  </div>
+</section>
+
+<section id="innsidehandel">
+  <div class="eyebrow">Innsidehandel</div>
+  <h2 class="title">Innsidehandel, tilbakekjøp og eierstruktur</h2>
+  <p class="lead" id="insider-lead"></p>
+  <div class="card table-scroll">
+    <table style="min-width:620px;">
+      <thead><tr><th>Dato</th><th>Person / rolle</th><th>Type</th><th class="num">Antall</th><th class="num">Kurs</th><th class="num">Verdi (kr)</th></tr></thead>
+      <tbody id="insider-table-body"></tbody>
+    </table>
+  </div>
+  <div class="grid-auto" style="margin-top:12px;">
+    <div class="card">
+      <div class="card-title">Tilbakekjøp av egne aksjer</div>
+      <div class="card-sub">Program 2026: 2 mrd kr i to transjer</div>
+      <div class="meter" id="buyback-meter" style="margin-bottom:8px;"></div>
+      <div style="display:flex;justify-content:space-between;" class="mono">
+        <span style="color:var(--mut);font-size:12px;">Gjennomført: ca. 1,0 mrd</span>
+        <span style="color:var(--mut);font-size:12px;">Mål 2026: 2,0 mrd</span>
+      </div>
+      <p class="ntext" style="margin-top:14px;" id="buyback-text"></p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:14px;">Eierstruktur (ca.)</div>
+      <div class="bars" id="ownership-bars"></div>
+      <p class="ntext" style="margin-top:12px;" id="ownership-note"></p>
+    </div>
+  </div>
+</section>
+
+<section id="sammenligning">
+  <div class="eyebrow">Sammenligning</div>
+  <h2 class="title">Mot lignende selskaper</h2>
+  <p class="lead">Storebrand mot andre nordiske forsikrings- og finanskonsern. Selskapene handles i ulik valuta (NOK/DKK/EUR) — P/E og direkteavkastning er valutanøytrale og best egnet for direkte sammenligning.</p>
+  <div class="grid-auto">
+    <div class="card">
+      <div class="card-title">P/E (pris / inntjening)</div>
+      <div class="card-sub">Lavere kan bety billigere — eller lavere forventet vekst</div>
+      <div class="bars" id="pe-bars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Direkteavkastning (utbytte)</div>
+      <div class="card-sub">Årlig utbytte i prosent av dagens kurs</div>
+      <div class="bars" id="yield-bars"></div>
+    </div>
+  </div>
+  <div class="card table-scroll" style="margin-top:12px;">
+    <table style="min-width:640px;">
+      <thead><tr><th>Selskap</th><th class="num">Kurs</th><th class="num">Markedsverdi</th><th class="num">P/E</th><th class="num">Dir.avk.</th><th class="num">1 år</th></tr></thead>
+      <tbody id="cmp-table-body"></tbody>
+    </table>
+    <div style="font-size:11.5px;color:var(--mut);margin-top:10px;">Tall i selskapets egen valuta. Kurs, P/E, markedsverdi og direkteavkastning oppdateres automatisk.</div>
+  </div>
+</section>
+
+<section id="nyheter">
+  <div class="eyebrow">Nyheter</div>
+  <h2 class="title">Hva kan påvirke kursen nå</h2>
+  <p class="lead">Det viktigste som skjer med Storebrand akkurat nå, og hva som er verdt å følge med på fremover.</p>
+  <div id="news-list"></div>
+</section>
+
+<section id="kilder">
+  <div class="eyebrow">Kilder og forbehold</div>
+  <div class="card">
+    <p class="disclaimer"><strong>Dette er ikke investeringsrådgivning.</strong> Tallene er hentet fra offentlig tilgjengelige kilder, sist oppdatert <span id="footer-updated"></span>, og kan avvike fra sanntidskurser og senere oppdaterte tall. Sjekk alltid Oslo Børs, Storebrands børsmeldinger eller din megler før du tar investeringsbeslutninger. Prediksjonen er en enkel statistisk illustrasjon, ikke en prognose.</p>
+    <div class="pills" id="sources-list"></div>
+  </div>
+</section>
 
 <div class="tooltip" id="tooltip"></div>
 

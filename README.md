@@ -24,7 +24,7 @@ og gå til `http://localhost:8000`.
 Dataene er delt i to:
 
 - **Auto-generert** (ikke rediger for hånd):
-  - [`js/prices.js`](js/prices.js) — historiske kursserier (1 år / 5 år / maks)
+  - [`js/prices.js`](js/prices.js) — historiske kursserier for STB (1 år / 5 år / maks) og for peers (`STB_PEER_PRICES`, brukt til den indekserte sammenligningsgrafen)
   - [`js/live.js`](js/live.js) — siste snapshot: kurs, dagens endring, 52-ukers spenn, **og nøkkeltall (P/E, forward-P/E, direkteavkastning, markedsverdi, EPS, beta)** for STB og de sammenlignbare selskapene. Feltet `dataDate` (siste handelsdato) brukes til å vise et varsel på siden hvis dataene blir utdaterte.
 - **Håndkuratert**: [`js/data.js`](js/data.js) — utbytte, rapporter, innsidehandel, nyheter, selskapsfakta, solvens og segmenttall som ikke finnes i API-et. `main.js` legger de auto-genererte tallene oppå denne ved innlasting.
 
