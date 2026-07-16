@@ -1,0 +1,45 @@
+name: Oppdater aksjedata
+
+# Henter ferske kurser fra Yahoo Finance og pusher til main.
+# Vercel bygger siden på nytt automatisk ved push til main.
+
+on:
+  schedule:
+    # Kl. 16:00 UTC på ukedager – etter at Oslo Børs har stengt (16:20/16:20 lokal tid).
+    - cron: "0 16 * * 1-5"
+  workflow_dispatch: {} # gjør det mulig å kjøre manuelt fra Actions-fanen
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-stock-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sjekk ut repo
+        uses: actions/checkout@v4
+
+      - name: Sett opp Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Hent ferske kurser
+        run: node scripts/update-data.mjs
+
+      - name: Commit og push hvis data er endret
+        run: |
+          git config user.name "stock-data-bot"
+          git config user.email "actions@github.com"
+          if git diff --quiet -- js/prices.js js/live.js; then
+            echo "Ingen endringer i kursdata – hopper over commit."
+          else
+            git add js/prices.js js/live.js
+            git commit -m "Auto-oppdater aksjedata ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            git push
+            echo "Kursdata oppdatert og pushet til main."
+          fi
