@@ -32,7 +32,30 @@ function fmtPctShort(v) {
       if (!live) return;
       if (live.price != null) p.price = live.price;
       if (live.oneYearPct != null) p.oneYearPct = Math.round(live.oneYearPct);
+      if (live.pe != null) p.pe = live.pe;
+      if (live.dividendYield != null) p.dividendYield = live.dividendYield;
+      if (live.marketCap != null) p.marketCap = live.marketCap;
     });
+  }
+})();
+
+/* ---------- Stale-data banner: varsle hvis auto-oppdateringen har stoppet ---------- */
+(function staleCheck() {
+  const banner = document.getElementById("stale-banner");
+  if (!banner) return;
+  // Ingen live-fil lastet i det hele tatt:
+  if (typeof STB_LIVE === "undefined" || !STB_LIVE.dataDate) {
+    banner.textContent = "⚠ Kunne ikke laste ferske kursdata — viser sist lagrede tall.";
+    banner.hidden = false;
+    return;
+  }
+  const last = new Date(STB_LIVE.dataDate + "T00:00:00Z");
+  const days = Math.floor((Date.now() - last.getTime()) / 86400000);
+  // Børsen er stengt i helger/helligdager, så 5 dager gir rom uten falske varsler.
+  if (days > 5) {
+    const d = last.toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
+    banner.textContent = `⚠ Kursdataene kan være utdaterte. Siste registrerte handelsdag er ${d} (${days} dager siden) — den automatiske oppdateringen kan ha feilet.`;
+    banner.hidden = false;
   }
 })();
 

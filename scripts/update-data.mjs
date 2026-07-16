@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-// Henter ferske kurser fra Yahoo Finance chart-API og skriver to auto-genererte filer:
+// Henter ferske data fra Yahoo Finance og skriver to auto-genererte filer:
 //   js/prices.js  – historiske kursserier (1 år daglig, 5 år ukentlig, maks månedlig)
-//   js/live.js    – siste kurs-snapshot for STB + peers (overstyrer håndkuratert data i data.js)
-// Kjøres av GitHub Actions på en tidsplan. Ved feil skrives INGEN filer (gammel, god data beholdes).
+//   js/live.js    – siste snapshot: kurs + nøkkeltall (P/E, direkteavkastning, markedsverdi …)
+//                   for STB og peers, som overstyrer håndkuratert data i data.js.
+// Kjøres av GitHub Actions på en tidsplan. Ved feil på kursseriene skrives INGEN filer
+// (gammel, god data beholdes). Nøkkeltall er "best effort": feiler de, beholdes forrige verdi.
 
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -19,12 +21,13 @@ const PEERS = [
   { ticker: "SAMPO.HE", currency: "EUR" },
 ];
 
+const round = (v, d = 2) => (v == null ? null : Math.round(v * 10 ** d) / 10 ** d);
+
 async function fetchChart(ticker, range, interval) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=${range}&interval=${interval}`;
   const res = await fetch(url, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${ticker} ${range}/${interval}`);
-  const json = await res.json();
-  const result = json?.chart?.result?.[0];
+  const result = (await res.json())?.chart?.result?.[0];
   if (!result) throw new Error(`No chart result for ${ticker} ${range}/${interval}`);
   return result;
 }
@@ -34,73 +37,109 @@ function seriesFrom(result, dateFmt) {
   const closes = result.indicators?.quote?.[0]?.close || [];
   const out = [];
   for (let i = 0; i < ts.length; i++) {
-    const c = closes[i];
-    if (c == null) continue;
-    const d = new Date(ts[i] * 1000);
-    const iso = d.toISOString();
-    out.push([dateFmt === "month" ? iso.slice(0, 7) : iso.slice(0, 10), Math.round(c * 100) / 100]);
+    if (closes[i] == null) continue;
+    const iso = new Date(ts[i] * 1000).toISOString();
+    out.push([dateFmt === "month" ? iso.slice(0, 7) : iso.slice(0, 10), round(closes[i])]);
   }
   return out;
 }
 
-function pctChange(series) {
-  if (series.length < 2) return null;
-  const first = series[0][1], last = series[series.length - 1][1];
-  return Math.round((last / first - 1) * 1000) / 10;
+const pctChange = (s) => (s.length < 2 ? null : round((s[s.length - 1][1] / s[0][1] - 1) * 100, 1));
+
+// ---- Nøkkeltall via crumb-beskyttet quoteSummary (best effort) ----
+async function getCrumb() {
+  const c = await fetch("https://fc.yahoo.com", { headers: { "User-Agent": UA } });
+  const cookies = (c.headers.getSetCookie?.() || []).map((s) => s.split(";")[0]).join("; ");
+  const res = await fetch("https://query1.finance.yahoo.com/v1/test/getcrumb", {
+    headers: { "User-Agent": UA, Cookie: cookies },
+  });
+  const crumb = await res.text();
+  if (!crumb || crumb.length > 40) throw new Error("Ugyldig crumb");
+  return { crumb, cookies };
 }
 
+async function fetchFundamentals(ticker, auth) {
+  const url =
+    `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}` +
+    `?modules=summaryDetail,defaultKeyStatistics&crumb=${encodeURIComponent(auth.crumb)}`;
+  const res = await fetch(url, { headers: { "User-Agent": UA, Cookie: auth.cookies } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const d = (await res.json())?.quoteSummary?.result?.[0] || {};
+  const sd = d.summaryDetail || {}, ks = d.defaultKeyStatistics || {};
+  const raw = (o, k) => (o[k] && typeof o[k] === "object" ? o[k].raw : undefined);
+  return {
+    peTtm: round(raw(sd, "trailingPE")),
+    peForward: round(raw(sd, "forwardPE")),
+    dividendYield: round(raw(sd, "dividendYield") * 100),
+    marketCap: round(raw(sd, "marketCap") / 1e9),
+    epsTtm: round(raw(ks, "trailingEps")),
+    beta: round(raw(sd, "beta")),
+  };
+}
+const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null && !Number.isNaN(v)));
+
 async function main() {
-  // ---- STB kursserier ----
+  // ---- STB kursserier (obligatorisk) ----
   const [oneYres, fiveYres, maxRes, fiveDres] = await Promise.all([
     fetchChart("STB.OL", "1y", "1d"),
     fetchChart("STB.OL", "5y", "1wk"),
     fetchChart("STB.OL", "max", "1mo"),
     fetchChart("STB.OL", "5d", "1d"),
   ]);
-
   const oneY = seriesFrom(oneYres, "day");
   const fiveY = seriesFrom(fiveYres, "day");
   const max = seriesFrom(maxRes, "month");
   if (!oneY.length || !fiveY.length || !max.length) throw new Error("Empty STB series");
 
-  // ---- STB siste kurs / dagens endring ----
   const meta = oneYres.meta || {};
   const dayCloses = seriesFrom(fiveDres, "day").map((d) => d[1]);
-  const price = Math.round((meta.regularMarketPrice ?? dayCloses[dayCloses.length - 1]) * 100) / 100;
-  const prevClose = dayCloses.length >= 2 ? dayCloses[dayCloses.length - 2] : meta.chartPreviousClose;
-  const change = Math.round((price - prevClose) * 100) / 100;
-  const changePct = Math.round((change / prevClose) * 10000) / 100;
+  const price = round(meta.regularMarketPrice ?? dayCloses.at(-1));
+  const prevClose = dayCloses.length >= 2 ? dayCloses.at(-2) : meta.chartPreviousClose;
+  const change = round(price - prevClose);
+  const changePct = round((change / prevClose) * 100);
+  const dataDate = oneY.at(-1)[0]; // siste handelsdato – brukes til å oppdage utdaterte data
 
-  const stbQuote = {
-    price,
-    change,
-    changePct,
-    week52Low: meta.fiftyTwoWeekLow != null ? Math.round(meta.fiftyTwoWeekLow * 100) / 100 : undefined,
-    week52High: meta.fiftyTwoWeekHigh != null ? Math.round(meta.fiftyTwoWeekHigh * 100) / 100 : undefined,
+  // ---- Nøkkeltall (best effort – hele blokken hoppes over hvis crumb feiler) ----
+  let auth = null;
+  try { auth = await getCrumb(); } catch (e) { console.warn("Crumb feilet, hopper over nøkkeltall:", e.message); }
+
+  let stbFund = {};
+  const peerFund = {};
+  if (auth) {
+    stbFund = clean(await fetchFundamentals("STB.OL", auth).catch(() => ({})));
+    for (const p of PEERS) {
+      const f = await fetchFundamentals(p.ticker, auth).catch(() => ({}));
+      peerFund[p.ticker] = clean({ pe: f.peTtm, dividendYield: f.dividendYield, marketCap: f.marketCap });
+    }
+  }
+
+  const stbQuote = clean({
+    price, change, changePct,
+    week52Low: round(meta.fiftyTwoWeekLow),
+    week52High: round(meta.fiftyTwoWeekHigh),
     volume: meta.regularMarketVolume,
+    ...stbFund,
     perf: { oneY: pctChange(oneY), fiveY: pctChange(fiveY), sinceGraph: pctChange(max) },
-  };
+  });
 
-  // ---- Peers: siste kurs + 1-års utvikling ----
-  const peerResults = await Promise.all(
-    PEERS.map((p) => fetchChart(p.ticker, "1y", "1wk").catch(() => null))
-  );
+  // ---- Peers: kurs + 1-års utvikling + nøkkeltall ----
+  const peerCharts = await Promise.all(PEERS.map((p) => fetchChart(p.ticker, "1y", "1wk").catch(() => null)));
   const peers = {};
   PEERS.forEach((p, i) => {
-    const r = peerResults[i];
-    if (!r) return;
-    const s = seriesFrom(r, "day");
-    if (!s.length) return;
-    const last = r.meta?.regularMarketPrice ?? s[s.length - 1][1];
-    peers[p.ticker] = {
-      price: Math.round(last * 100) / 100,
-      oneYearPct: pctChange(s),
-    };
+    const r = peerCharts[i];
+    const entry = { ...(peerFund[p.ticker] || {}) };
+    if (r) {
+      const s = seriesFrom(r, "day");
+      if (s.length) {
+        entry.price = round(r.meta?.regularMarketPrice ?? s.at(-1)[1]);
+        entry.oneYearPct = pctChange(s);
+      }
+    }
+    if (Object.keys(entry).length) peers[p.ticker] = entry;
   });
 
   const updated = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
 
-  // ---- Skriv filer ----
   const pricesJs =
     "// Ekte historiske sluttkurser for STB.OL (Oslo Børs), hentet via Yahoo Finance chart-API.\n" +
     "// oneY: siste 12 mnd (daglig) · fiveY: 5 år (ukentlig) · max: siden 2000 (månedlig).\n" +
@@ -108,15 +147,19 @@ async function main() {
     "const STB_PRICES = " + JSON.stringify({ oneY, fiveY, max }) + ";\n";
 
   const liveJs =
-    "// Siste kurs-snapshot, AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.\n" +
+    "// Siste snapshot (kurs + nøkkeltall), AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.\n" +
     "// main.js legger disse verdiene over den håndkuraterte dataen i data.js ved innlasting.\n" +
-    "const STB_LIVE = " + JSON.stringify({ updated, quote: stbQuote, peers }, null, 2) + ";\n";
+    "// dataDate = siste handelsdato; brukes til å vise et varsel hvis dataene blir utdaterte.\n" +
+    "const STB_LIVE = " + JSON.stringify({ updated, dataDate, quote: stbQuote, peers }, null, 2) + ";\n";
 
   writeFileSync(join(ROOT, "js", "prices.js"), pricesJs);
   writeFileSync(join(ROOT, "js", "live.js"), liveJs);
 
-  console.log(`OK – oppdatert ${updated}: STB ${price} (${changePct > 0 ? "+" : ""}${changePct} %), ` +
-    `${oneY.length}/${fiveY.length}/${max.length} punkter, ${Object.keys(peers).length}/${PEERS.length} peers.`);
+  console.log(
+    `OK – ${updated}: STB ${price} (${changePct > 0 ? "+" : ""}${changePct} %), ` +
+    `nøkkeltall ${auth ? "hentet" : "hoppet over"}, ` +
+    `${oneY.length}/${fiveY.length}/${max.length} punkter, ${Object.keys(peers).length}/${PEERS.length} peers.`
+  );
 }
 
 main().catch((err) => {

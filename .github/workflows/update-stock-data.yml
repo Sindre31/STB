@@ -5,9 +5,14 @@ name: Oppdater aksjedata
 
 on:
   schedule:
-    # Kl. 16:00 UTC på ukedager – etter at Oslo Børs har stengt (16:20/16:20 lokal tid).
+    # Kl. 16:00 UTC på ukedager – etter at Oslo Børs har stengt (ca. 16:20 lokal tid).
     - cron: "0 16 * * 1-5"
-  workflow_dispatch: {} # gjør det mulig å kjøre manuelt fra Actions-fanen
+  workflow_dispatch:
+    inputs:
+      force_commit:
+        description: "Tving en commit selv om dataene er uendret (for å teste push → Vercel-kjeden)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -35,11 +40,11 @@ jobs:
         run: |
           git config user.name "stock-data-bot"
           git config user.email "actions@github.com"
-          if git diff --quiet -- js/prices.js js/live.js; then
+          if git diff --quiet -- js/prices.js js/live.js && [ "${{ inputs.force_commit }}" != "true" ]; then
             echo "Ingen endringer i kursdata – hopper over commit."
           else
             git add js/prices.js js/live.js
-            git commit -m "Auto-oppdater aksjedata ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            git commit --allow-empty -m "Auto-oppdater aksjedata ($(date -u '+%Y-%m-%d %H:%M UTC'))"
             git push
             echo "Kursdata oppdatert og pushet til main."
           fi

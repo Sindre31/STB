@@ -25,8 +25,10 @@ Dataene er delt i to:
 
 - **Auto-generert** (ikke rediger for hånd):
   - [`js/prices.js`](js/prices.js) — historiske kursserier (1 år / 5 år / maks)
-  - [`js/live.js`](js/live.js) — siste kurs-snapshot for STB og sammenlignbare selskaper
-- **Håndkuratert**: [`js/data.js`](js/data.js) — utbytte, rapporter, innsidehandel, nyheter, selskapsfakta og nøkkeltall som ikke finnes i kurs-API-et. `main.js` legger de auto-genererte tallene oppå denne ved innlasting.
+  - [`js/live.js`](js/live.js) — siste snapshot: kurs, dagens endring, 52-ukers spenn, **og nøkkeltall (P/E, forward-P/E, direkteavkastning, markedsverdi, EPS, beta)** for STB og de sammenlignbare selskapene. Feltet `dataDate` (siste handelsdato) brukes til å vise et varsel på siden hvis dataene blir utdaterte.
+- **Håndkuratert**: [`js/data.js`](js/data.js) — utbytte, rapporter, innsidehandel, nyheter, selskapsfakta, solvens og segmenttall som ikke finnes i API-et. `main.js` legger de auto-genererte tallene oppå denne ved innlasting.
+
+Hvis auto-oppdateringen stopper (f.eks. hvis Yahoo-API-et endrer seg), viser siden automatisk et gult varsel når siste handelsdato er mer enn 5 dager gammel.
 
 ### Slik holdes kursene oppdatert
 
@@ -38,8 +40,8 @@ Kjør manuelt lokalt med:
 node scripts/update-data.mjs
 ```
 
-eller trigg jobben manuelt fra **Actions**-fanen på GitHub (`workflow_dispatch`).
+eller trigg jobben manuelt fra **Actions**-fanen på GitHub (`workflow_dispatch`). Manuell kjøring har et valg **`force_commit`** som tvinger en commit selv om dataene er uendret — nyttig for å teste at hele push → Vercel-kjeden virker.
 
-> Nøkkeltall som P/E, direkteavkastning, solvensmargin og segmentresultat oppdateres ikke automatisk — de ligger i `js/data.js` og bør oppdateres for hånd ved nye kvartalsrapporter.
+> Kurs, P/E, direkteavkastning, markedsverdi og EPS oppdateres automatisk (også etter kvartalsrapporter, siden de kommer fra markedsdata). Solvensmargin, combined ratio, segmentresultat, utbyttehistorikk, innsidehandel og nyhetstekst finnes ikke i API-et og må fortsatt oppdateres for hånd i `js/data.js` ved nye rapporter.
 
 **Dette er ikke investeringsrådgivning.**
