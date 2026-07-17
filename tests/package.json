@@ -1,0 +1,13 @@
+{
+  "name": "stb-tests",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Røyktest for Storebrand-oversikten (ligger i egen mappe så Vercels statiske deploy ikke påvirkes av en package.json i rot).",
+  "scripts": {
+    "test": "node smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

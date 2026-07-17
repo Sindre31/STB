@@ -796,6 +796,20 @@ function renderNews() {
   });
 }
 
+/* ---------- Datastatus (helse per kilde) ---------- */
+function renderHealth() {
+  const box = document.getElementById("data-health");
+  if (!box || typeof STB_HEALTH === "undefined" || !STB_HEALTH.sources) return;
+  const degraded = Object.values(STB_HEALTH.sources).filter((s) => !s.ok).length;
+  document.getElementById("health-sub").textContent = degraded === 0
+    ? `Alle automatiske datakilder leverer normalt · sist hentet ${STB_HEALTH.updated}`
+    : `${degraded} kilde(r) leverer ikke som forventet · sist hentet ${STB_HEALTH.updated}`;
+  Object.entries(STB_HEALTH.sources).forEach(([name, s]) => {
+    const col = s.ok ? "var(--up)" : "var(--down)";
+    box.appendChild(h(`<div class="health-item"><span class="health-dot" style="background:${col}"></span><span class="health-name">${name}</span><span class="health-n">${s.ok ? "✓" : "⚠"} ${nf0.format(s.n)}</span></div>`));
+  });
+}
+
 /* ---------- Kilder ---------- */
 function renderSources() {
   document.getElementById("footer-updated").textContent = STB_DATA.meta.updated;
@@ -1126,6 +1140,7 @@ renderNewsFeed();
 renderInsiders();
 renderComparison();
 renderNews();
+renderHealth();
 renderSources();
 wirePopups();
 wireInfoIcons();

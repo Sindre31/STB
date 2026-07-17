@@ -355,6 +355,25 @@ async function main() {
     writeFileSync(join(ROOT, "js", "targethistory.js"), thJs);
   }
 
+  // ---- Data-helse: fang opp at en kilde stille slutter å levere ----
+  const health = {
+    updated, dataDate,
+    sources: {
+      "Kursserier": { ok: oneY.length > 100, n: oneY.length },
+      "Nøkkeltall": { ok: Object.keys(stbFund).length >= 3, n: Object.keys(stbFund).length },
+      "Peers": { ok: Object.keys(peers).length >= 4, n: Object.keys(peers).length },
+      "Rentesignal": { ok: rate.rate10yChg3m != null, n: rate.rate10yChg3m != null ? 1 : 0 },
+      "Innsidehandel": { ok: insiders.length >= 1, n: insiders.length },
+      "Tilbakekjøp": { ok: buybacks.length >= 1, n: buybacks.length },
+      "Børsmeldinger": { ok: newsFeed.length >= 3, n: newsFeed.length },
+    },
+  };
+  const degraded = Object.entries(health.sources).filter(([, s]) => !s.ok).map(([k]) => k);
+  if (degraded.length) console.warn("⚠ Data-helse: svekkede kilder →", degraded.join(", "));
+  writeFileSync(join(ROOT, "js", "health.js"),
+    "// Data-helse: status per kilde ved siste kjøring. AUTO-GENERERT av scripts/update-data.mjs.\n" +
+    "const STB_HEALTH = " + JSON.stringify(health, null, 2) + ";\n");
+
   console.log(
     `OK – ${updated}: STB ${price} (${changePct > 0 ? "+" : ""}${changePct} %), ` +
     `nøkkeltall ${auth ? "hentet" : "hoppet over"}, ` +

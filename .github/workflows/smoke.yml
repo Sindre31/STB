@@ -1,0 +1,28 @@
+name: Røyktest
+
+# Kjører en rask nettleser-røyktest ved hver push/PR: rendrer siden, åpner popups
+# og fanger JS-feil, så en endring ikke stille knekker noe.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Installer avhengigheter
+        working-directory: tests
+        run: npm install --no-audit --no-fund
+      - name: Installer Chromium
+        working-directory: tests
+        run: npx playwright install --with-deps chromium
+      - name: Kjør røyktest
+        working-directory: tests
+        run: npm test
