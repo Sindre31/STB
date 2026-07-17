@@ -133,6 +133,19 @@ const STB_DATA = {
     ],
   },
 
+  // Kontantresultat (cash equivalent earnings før amortisering) per segment, årlig (mill. kr).
+  // Ekte tall fra Storebrands årsrapporter 2022–2025 (note «Resultat per segment»).
+  segmentHistory: {
+    source: "Storebrands årsrapporter 2022–2025",
+    years: [2022, 2023, 2024, 2025],
+    series: [
+      { name: "Sparing", color: "var(--acc)", values: [1653, 1862, 2592, 2925] },
+      { name: "Forsikring", color: "var(--up)", values: [596, 27, 546, 1062] },
+      { name: "Garantert pensjon", color: "var(--peer)", values: [903, 1326, 1226, 1229] },
+      { name: "Øvrig", color: "var(--ai)", values: [-420, 265, 1539, 479] },
+    ],
+  },
+
   // Solvensmargin (Solvens II) ved årsslutt (%). Kilde: Storebrand kvartals-/årsrapporter.
   solvencyHistory: [
     { year: "2023", value: 191 },

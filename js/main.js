@@ -987,13 +987,36 @@ function show1yPrice() {
   wrap.appendChild(h(`<p class="ntext" style="margin-top:12px;color:var(--mut)">Avkastning siste år: ${pct1(ret)} (fra ${nf0.format(pts[0][1])} til ${nf0.format(pts[pts.length - 1][1])} kr).</p>`));
   openModal("Avkastning siste 12 måneder", wrap);
 }
+// Flerlinje-graf med kategoriske x-verdier (år), håndterer negative verdier.
+function multiLineCategoryChart(labels, series, fmt) {
+  const W = 620, H = 300, PADL = 52, PADR = 92, TOP = 16, BOT = 244, n = labels.length;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart-svg" });
+  const vals = series.flatMap((s) => s.values);
+  let yMin = Math.min(...vals, 0), yMax = Math.max(...vals); const padY = (yMax - yMin) * 0.1 || 1; yMin -= padY; yMax += padY;
+  const X = (i) => PADL + (n === 1 ? 0.5 : i / (n - 1)) * (W - PADR - PADL);
+  const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
+  for (let s = 0; s <= 4; s++) { const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v); svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: yy, y2: yy, class: "chart-grid" })); svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, fmt(v))); }
+  labels.forEach((l, i) => svg.appendChild(el("text", { x: X(i), y: BOT + 18, "text-anchor": "middle", class: "chart-axis" }, l)));
+  if (yMin < 0) { const yy = Y(0); svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: yy, y2: yy, stroke: "var(--mut)", "stroke-width": 1 })); }
+  series.forEach((s) => {
+    let d = ""; s.values.forEach((v, i) => (d += (i ? " L " : "M ") + X(i) + " " + Y(v)));
+    svg.appendChild(el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2.2 }));
+    s.values.forEach((v, i) => svg.appendChild(el("circle", { cx: X(i), cy: Y(v), r: 3, fill: s.color })));
+    const last = s.values[s.values.length - 1];
+    svg.appendChild(el("text", { x: W - PADR + 4, y: Y(last) + 4, class: "chart-axis", fill: s.color }, s.name.split(" ")[0]));
+  });
+  return svg;
+}
 function showSegmentDev() {
-  const segs = STB_DATA.segments, fh = STB_DATA.financialsHistory;
+  const segs = STB_DATA.segments, sh = STB_DATA.segmentHistory;
   const wrap = document.createElement("div");
-  wrap.appendChild(h(`<div class="modal-sub">Konsernets resultat de siste årene (ekte årstall), og hvordan kontantresultatet fordeler seg på segmentene i siste kvartal mot samme kvartal i fjor. Full segment­historikk år for år ligger i årsrapportene.</div>`));
-  // Ekte flerårig resultattrend for konsernet.
-  wrap.appendChild(h(`<div class="method-h">Konsernresultat (mill. kr, netto)</div>`));
-  wrap.appendChild(historyChartSVG(fh.map((f) => [String(f.year), f.netIncome]), (v) => nf0.format(v), "var(--acc)"));
+  wrap.appendChild(h(`<div class="modal-sub">Kontantresultatet (cash equivalent earnings før amortisering) per segment de siste årene — ekte årstall fra Storebrands årsrapporter — og siste kvartal mot samme kvartal i fjor.</div>`));
+  // Ekte flerårig per-segment trend.
+  if (sh) {
+    wrap.appendChild(h(`<div class="method-h">Kontantresultat per segment (mill. kr, årlig)</div>`));
+    wrap.appendChild(multiLineCategoryChart(sh.years.map(String), sh.series, (v) => nf0.format(v)));
+    wrap.appendChild(h(`<p class="ntext" style="color:var(--mut);margin-top:6px">Kilde: ${sh.source}. Negative verdier for «Øvrig» skyldes elimineringer og finansposter.</p>`));
+  }
   // Per-segment: siste kvartal mot samme kvartal i fjor.
   wrap.appendChild(h(`<div class="method-h" style="margin-top:20px;">Kontantresultat per segment: Q2 2026 vs Q2 2025</div>`));
   const withPrev = segs.map((s) => ({ ...s, prev: s.growthPct != null ? s.value / (1 + s.growthPct / 100) : null }));
