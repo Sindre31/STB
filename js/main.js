@@ -119,11 +119,19 @@ function renderStats() {
 }
 
 /* ---------- Prisgraf med periode + peer-sammenligning ---------- */
-const PERIODS = [["oneY", "1 år"], ["fiveY", "5 år"], ["max", "Maks"]];
+const PERIODS = [["1m", "1 mnd"], ["3m", "3 mnd"], ["oneY", "1 år"], ["fiveY", "5 år"], ["max", "Maks"]];
 const PEER_SHORT = { "GJF.OL": "Gjensidige", "PROT.OL": "Protector", "TRYG.CO": "Tryg", "SAMPO.HE": "Sampo" };
 const PEER_COLORS = { "GJF.OL": "#6ea8dc", "PROT.OL": "#3ecf8e", "TRYG.CO": "#c58af0", "SAMPO.HE": "#e8975a" };
+const MND = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"];
 // 1-års avkastning beregnet fra daglig serie – samme metode for STB og alle peers.
 const oneYearRet = (series) => (series && series.length > 1 ? ((series[series.length - 1][1] / series[0][1]) - 1) * 100 : null);
+// Hent riktig kursserie for valgt periode. 1m/3m utledes fra den daglige 1-års-serien.
+function seriesSlice(store, period) {
+  if (!store) return null;
+  if (period === "1m") return store.oneY.slice(-22);
+  if (period === "3m") return store.oneY.slice(-66);
+  return store[period];
+}
 
 function renderPriceChart() {
   const svg = document.getElementById("price-chart");
@@ -155,11 +163,12 @@ function renderPriceChart() {
 
     // Bygg liste av serier som skal tegnes. I sammenligningsmodus indekseres alt til 100.
     const idx = (arr) => arr.map((d) => (arr[0][1] ? (d[1] / arr[0][1]) * 100 : 100));
+    const stbArr = seriesSlice(STB_PRICES, period);
     const series = [];
-    series.push({ name: "Storebrand", color: "var(--acc)", width: 2.2, raw: STB_PRICES[period], vals: comparing ? idx(STB_PRICES[period]) : STB_PRICES[period].map((d) => d[1]) });
+    series.push({ name: "Storebrand", color: "var(--acc)", width: 2.2, raw: stbArr, vals: comparing ? idx(stbArr) : stbArr.map((d) => d[1]) });
     if (comparing) {
       [...cmp].forEach((tk) => {
-        const arr = STB_PEER_PRICES[tk][period];
+        const arr = seriesSlice(STB_PEER_PRICES[tk], period);
         series.push({ name: PEER_SHORT[tk], color: PEER_COLORS[tk], width: 2, raw: arr, vals: idx(arr) });
       });
     }
@@ -176,7 +185,7 @@ function renderPriceChart() {
       svg.appendChild(el("line", { x1: PADL, x2: XR, y1: yy, y2: yy, class: "chart-grid" }));
       svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, yFmt(v)));
     }
-    const stb = STB_PRICES[period];
+    const stb = stbArr;
     [0, Math.floor(stb.length / 2), stb.length - 1].forEach((i) => {
       svg.appendChild(el("text", { x: xAt(i, stb.length), y: 314, "text-anchor": i === 0 ? "start" : i === stb.length - 1 ? "end" : "middle", class: "chart-axis" }, stb[i][0]));
     });
@@ -234,97 +243,148 @@ function renderPriceChart() {
   draw();
 }
 
-/* ---------- AI-ekspert: egen meningslinje ved siden av kursen ---------- */
+/* ---------- AI-ekspert: egen meningslinje + fremtidsprojeksjon ---------- */
+const AI_LOOKBACKS = [["1m", "1 mnd"], ["3m", "3 mnd"], ["1y", "1 år"], ["3y", "3 år"]];
+const AI_FORWARDS = [[0, "0"], [1, "1 mnd"], [3, "3 mnd"], [6, "6 mnd"], [12, "12 mnd"]];
+function aiLookback(lb) {
+  if (lb === "1m") return STB_PRICES.oneY.slice(-22);
+  if (lb === "3m") return STB_PRICES.oneY.slice(-66);
+  if (lb === "3y") return STB_PRICES.fiveY.slice(-157);
+  return STB_PRICES.oneY;
+}
 function renderAiExpert() {
   const svg = document.getElementById("ai-chart");
-  const data = STB_PRICES.oneY;
-  const prices = data.map((d) => d[1]);
-  const n = prices.length;
   const q = STB_DATA.quote, k = STB_DATA.kpis;
+  let lb = "1y", fwd = 3;
 
-  // AI-ekspertens "rettferdige verdi": glidende verdivurdering (trend) forankret mot analytikernes snittmål.
-  const win = Math.max(10, Math.round(n / 6));
-  const sma = prices.map((_, i) => {
-    const a = Math.max(0, i - win + 1), slice = prices.slice(a, i + 1);
-    return slice.reduce((s, v) => s + v, 0) / slice.length;
+  const lbWrap = document.getElementById("ai-lookback-buttons");
+  AI_LOOKBACKS.forEach(([key, label]) => {
+    const b = h(`<button class="tbtn${key === lb ? " active" : ""}">${label}</button>`);
+    b.addEventListener("click", () => { lb = key; [...lbWrap.children].forEach((x, i) => x.classList.toggle("active", AI_LOOKBACKS[i][0] === key)); draw(); });
+    lbWrap.appendChild(b);
   });
-  // Dra linja gradvis mot analytikernes snittmål mot slutten (ekspertens fremoverblikk).
-  const fair = sma.map((v, i) => {
-    if (!q.analystTarget) return v;
-    const w = (i / (n - 1)) * 0.35; // opp til 35 % vekt på slutten
-    return v * (1 - w) + q.analystTarget * w;
+  const fwWrap = document.getElementById("ai-forward-buttons");
+  AI_FORWARDS.forEach(([val, label]) => {
+    const b = h(`<button class="tbtn${val === fwd ? " active" : ""}">${label}</button>`);
+    b.addEventListener("click", () => { fwd = val; [...fwWrap.children].forEach((x, i) => x.classList.toggle("active", AI_FORWARDS[i][0] === fwd)); draw(); });
+    fwWrap.appendChild(b);
   });
 
-  const PADL = 48, PADR = 16, TOP = 14, BOT = 268, XR = 800 - PADR;
-  let yMin = Math.min(...prices, ...fair), yMax = Math.max(...prices, ...fair);
-  const padY = (yMax - yMin) * 0.08 || 1; yMin -= padY; yMax += padY;
-  const X = (i) => PADL + (i / (n - 1)) * (XR - PADL);
-  const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
+  const PADL = 48, PADR = 16, TOP = 14, BOT = 268, XR = 800 - PADR, MS_M = 30.44 * 86400000;
+  const bandPct = (m) => Math.min(0.03 * Math.sqrt(m), 0.15);
 
-  for (let s = 0; s <= 4; s++) {
-    const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v);
-    svg.appendChild(el("line", { x1: PADL, x2: XR, y1: yy, y2: yy, class: "chart-grid" }));
-    svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, nf0.format(v)));
+  function draw() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const hist = aiLookback(lb), n = hist.length;
+    const prices = hist.map((d) => d[1]);
+    const target = q.analystTarget || prices[n - 1];
+
+    // AI-estimat: glidende verdivurdering forankret gradvis mot analytikernes snittmål.
+    const win = Math.max(5, Math.round(n / 6));
+    const sma = prices.map((_, i) => { const a = Math.max(0, i - win + 1), s = prices.slice(a, i + 1); return s.reduce((x, v) => x + v, 0) / s.length; });
+    const fair = sma.map((v, i) => { const w = (i / (n - 1)) * 0.35; return v * (1 - w) + target * w; });
+    const fairEnd = fair[n - 1];
+
+    // Fremtidsprojeksjon: fra dagens estimat mot analytikernes 12-mnd mål, med voksende usikkerhet.
+    const fVals = [], fHi = [], fLo = [];
+    for (let m = 1; m <= fwd; m++) { const v = fairEnd + (target - fairEnd) * (m / 12); fVals.push(v); fHi.push(v * (1 + bandPct(m))); fLo.push(v * (1 - bandPct(m))); }
+
+    const ts = hist.map((d) => Date.parse(d[0])), todayTs = ts[n - 1];
+    const fTs = []; for (let m = 1; m <= fwd; m++) fTs.push(todayTs + m * MS_M);
+    const xMin = ts[0], xMax = fwd > 0 ? fTs[fwd - 1] : todayTs;
+    const X = (t) => PADL + (t - xMin) / (xMax - xMin) * (XR - PADL);
+
+    const allV = [...prices, ...fair, ...(fwd > 0 ? [...fVals, ...fHi, ...fLo] : [])];
+    let yMin = Math.min(...allV), yMax = Math.max(...allV);
+    const padY = (yMax - yMin) * 0.08 || 1; yMin -= padY; yMax += padY;
+    const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
+
+    for (let s = 0; s <= 4; s++) {
+      const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v);
+      svg.appendChild(el("line", { x1: PADL, x2: XR, y1: yy, y2: yy, class: "chart-grid" }));
+      svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, nf0.format(v)));
+    }
+    const tickTs = fwd > 0 ? [xMin, todayTs, xMax] : [xMin, ts[Math.floor(n / 2)], todayTs];
+    tickTs.forEach((t, i) => { const d = new Date(t); svg.appendChild(el("text", { x: X(t), y: 288, "text-anchor": i === 0 ? "start" : i === tickTs.length - 1 ? "end" : "middle", class: "chart-axis" }, MND[d.getUTCMonth()] + " " + String(d.getUTCFullYear()).slice(2))); });
+
+    // areal under kurs (historikk)
+    let ap = ""; prices.forEach((v, i) => { ap += (i ? " L " : "M ") + X(ts[i]) + " " + Y(v); });
+    ap += ` L ${X(todayTs)} ${BOT} L ${X(xMin)} ${BOT} Z`;
+    svg.appendChild(el("path", { d: ap, fill: "var(--acc)", "fill-opacity": "0.07", stroke: "none" }));
+
+    if (fwd > 0) {
+      let bd = `M ${X(todayTs)} ${Y(fairEnd)}`;
+      for (let m = 0; m < fwd; m++) bd += ` L ${X(fTs[m])} ${Y(fHi[m])}`;
+      for (let m = fwd - 1; m >= 0; m--) bd += ` L ${X(fTs[m])} ${Y(fLo[m])}`;
+      svg.appendChild(el("path", { d: bd + " Z", fill: "var(--ai)", "fill-opacity": "0.13", stroke: "none" }));
+      let fl = `M ${X(todayTs)} ${Y(fairEnd)}`; for (let m = 0; m < fwd; m++) fl += ` L ${X(fTs[m])} ${Y(fVals[m])}`;
+      svg.appendChild(el("path", { d: fl, fill: "none", stroke: "var(--ai)", "stroke-width": "2", "stroke-dasharray": "2,3" }));
+    }
+    let fd = ""; fair.forEach((v, i) => { fd += (i ? " L " : "M ") + X(ts[i]) + " " + Y(v); });
+    svg.appendChild(el("path", { d: fd, fill: "none", stroke: "var(--ai)", "stroke-width": "2", "stroke-dasharray": "6,4" }));
+    let pd = ""; prices.forEach((v, i) => { pd += (i ? " L " : "M ") + X(ts[i]) + " " + Y(v); });
+    svg.appendChild(el("path", { d: pd, fill: "none", stroke: "var(--acc)", "stroke-width": "2.2" }));
+
+    if (fwd > 0) {
+      svg.appendChild(el("line", { x1: X(todayTs), x2: X(todayTs), y1: TOP, y2: BOT, stroke: "var(--mut)", "stroke-width": "1", "stroke-dasharray": "2,4" }));
+      svg.appendChild(el("text", { x: X(todayTs), y: 26, "text-anchor": "middle", class: "chart-axis" }, "i dag"));
+      svg.appendChild(el("circle", { cx: X(fTs[fwd - 1]), cy: Y(fVals[fwd - 1]), r: 4.5, fill: "var(--ai)" }));
+      svg.appendChild(el("text", { x: X(fTs[fwd - 1]), y: Y(fVals[fwd - 1]) - 8, "text-anchor": "end", class: "chart-axis", fill: "var(--ai)", "font-weight": "600" }, kr(fVals[fwd - 1], 0)));
+    }
+
+    // hover (historikk-delen)
+    const vline = el("line", { x1: 0, x2: 0, y1: TOP, y2: BOT, stroke: "var(--mut)", "stroke-width": "1", "stroke-dasharray": "3,3", opacity: "0" });
+    const dP = el("circle", { r: 4, fill: "var(--acc)", opacity: "0" }), dF = el("circle", { r: 4, fill: "var(--ai)", opacity: "0" });
+    svg.appendChild(vline); svg.appendChild(dP); svg.appendChild(dF);
+    const ovW = Math.max(1, X(todayTs) - PADL);
+    const overlay = el("rect", { x: PADL, y: TOP, width: ovW, height: BOT - TOP, fill: "transparent", "pointer-events": "all" });
+    svg.appendChild(overlay);
+    const move = (evt) => {
+      const t = evt.touches ? evt.touches[0] : evt;
+      const pt = svg.createSVGPoint(); pt.x = t.clientX; pt.y = t.clientY;
+      const ctm = svg.getScreenCTM(); if (!ctm) return;
+      const f = Math.max(0, Math.min(1, (pt.matrixTransform(ctm.inverse()).x - PADL) / ovW));
+      const i = Math.round(f * (n - 1)), px = X(ts[i]);
+      vline.setAttribute("x1", px); vline.setAttribute("x2", px); vline.setAttribute("opacity", "1");
+      dP.setAttribute("cx", px); dP.setAttribute("cy", Y(prices[i])); dP.setAttribute("opacity", "1");
+      dF.setAttribute("cx", px); dF.setAttribute("cy", Y(fair[i])); dF.setAttribute("opacity", "1");
+      showTip(t, `<div class="t-date">${hist[i][0]}</div><div style="color:var(--acc)">Kurs: ${kr(prices[i])}</div><div style="color:var(--ai)">AI-estimat: ${kr(fair[i])}</div>`);
+    };
+    const clear = () => { vline.setAttribute("opacity", "0"); dP.setAttribute("opacity", "0"); dF.setAttribute("opacity", "0"); hideTip(); };
+    overlay.addEventListener("mousemove", move); overlay.addEventListener("mouseleave", clear);
+    overlay.addEventListener("touchmove", move, { passive: true }); overlay.addEventListener("touchend", clear);
+
+    // --- Vurdering ---
+    const gap = ((q.price - fairEnd) / fairEnd) * 100;
+    const peerAvgPe = avg(STB_DATA.peers.filter((p) => !p.isSubject).map((p) => p.pe));
+    const peerAvgY = avg(STB_DATA.peers.filter((p) => !p.isSubject).map((p) => p.dividendYield));
+    const ret1y = oneYearRet(STB_PRICES.oneY);
+    let rating, cls;
+    if (gap > 6) { rating = "Dyr priset"; cls = "down"; }
+    else if (gap < -6) { rating = "Billig priset"; cls = "up"; }
+    else { rating = "Rimelig priset"; cls = "neutral"; }
+    document.getElementById("ai-badge").innerHTML = `<span class="ai-badge ${cls}">AI-ekspert: ${rating}</span>`;
+    document.getElementById("ai-estimate").textContent = fwd > 0 ? `Anslag om ${fwd} mnd: ~${kr(fVals[fwd - 1], 0)}` : "";
+
+    const signals = [
+      sig("Verdi vs. kurs", gap <= 0, `Kursen er ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-estimatet`),
+      sig("Kursmål", q.price <= target, `${nf1.format(Math.abs((q.price / target - 1) * 100))} % ${q.price <= target ? "opp til" : "over"} analytikernes mål`),
+      sig("P/E vs. bransjen", q.peTtm <= peerAvgPe, `P/E ${nf1.format(q.peTtm)} mot snitt ${nf1.format(peerAvgPe)}`),
+      sig("Utbytte vs. bransjen", q.dividendYield >= peerAvgY, `${nf1.format(q.dividendYield)} % mot snitt ${nf1.format(peerAvgY)} %`),
+      sig("Soliditet", k.solvency >= 175, `Solvens ${k.solvency} % ${k.solvency >= 175 ? "gir rom for tilbakekjøp" : ""}`),
+    ];
+    const sc = signals.filter((s) => s.good).length - signals.filter((s) => !s.good).length;
+    const chips = document.getElementById("ai-signals"); chips.innerHTML = "";
+    signals.forEach((s) => chips.appendChild(h(`<span class="ai-chip ${s.good ? "good" : "bad"}">${s.good ? "▲" : "▼"} ${s.label}<span class="ai-chip-sub">${s.detail}</span></span>`)));
+
+    const fundament = sc >= 2 ? "trekker i positiv retning" : sc <= -2 ? "trekker i negativ retning" : "er blandet";
+    let txt = `Etter en oppgang på ${pct1(ret1y)} det siste året handles Storebrand nå ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-ekspertens estimerte verdi på ${kr(fairEnd, 0)}. ` +
+      `Verdsettelsen (P/E ${nf1.format(q.peTtm)}) er ${q.peTtm <= peerAvgPe ? "lavere" : "høyere"} enn snittet for lignende selskaper (${nf1.format(peerAvgPe)}), direkteavkastningen er ${nf1.format(q.dividendYield)} %, og solvensmarginen på ${k.solvency} % ${k.solvency >= 175 ? "gir rom for fortsatte tilbakekjøp" : "er solid"}. `;
+    if (fwd > 0) txt += `AI-ekspertens anslag ${fwd} måneder frem: <strong>~${kr(fVals[fwd - 1], 0)}</strong> (usikkerhet ±${nf0.format(bandPct(fwd) * 100)} %), på vei mot analytikernes mål på ${kr(target, 0)}. `;
+    txt += `Konklusjon: aksjen ser <strong>${rating.toLowerCase()}</strong> ut mot sin egen verdibane, mens verdsettelse og soliditet ${fundament}.`;
+    document.getElementById("ai-rationale").innerHTML = txt;
   }
-  [0, Math.floor(n / 2), n - 1].forEach((i) => {
-    svg.appendChild(el("text", { x: X(i), y: 288, "text-anchor": i === 0 ? "start" : i === n - 1 ? "end" : "middle", class: "chart-axis" }, data[i][0]));
-  });
-  const pathFor = (arr) => { let d = ""; arr.forEach((v, i) => { d += (i ? " L " : "M ") + X(i) + " " + Y(v); }); return d; };
-  svg.appendChild(el("path", { d: pathFor(fair), fill: "none", stroke: "var(--ai)", "stroke-width": "2", "stroke-dasharray": "6,4" }));
-  svg.appendChild(el("path", { d: pathFor(prices), fill: "none", stroke: "var(--acc)", "stroke-width": "2.2" }));
-
-  // hover
-  const vline = el("line", { x1: 0, x2: 0, y1: TOP, y2: BOT, stroke: "var(--mut)", "stroke-width": "1", "stroke-dasharray": "3,3", opacity: "0" });
-  const dP = el("circle", { r: 4, fill: "var(--acc)", opacity: "0" }), dF = el("circle", { r: 4, fill: "var(--ai)", opacity: "0" });
-  svg.appendChild(vline); svg.appendChild(dP); svg.appendChild(dF);
-  const overlay = el("rect", { x: PADL, y: TOP, width: XR - PADL, height: BOT - TOP, fill: "transparent", "pointer-events": "all" });
-  svg.appendChild(overlay);
-  const move = (evt) => {
-    const t = evt.touches ? evt.touches[0] : evt;
-    const pt = svg.createSVGPoint(); pt.x = t.clientX; pt.y = t.clientY;
-    const ctm = svg.getScreenCTM(); if (!ctm) return;
-    const f = Math.max(0, Math.min(1, (pt.matrixTransform(ctm.inverse()).x - PADL) / (XR - PADL)));
-    const i = Math.round(f * (n - 1)), px = X(i);
-    vline.setAttribute("x1", px); vline.setAttribute("x2", px); vline.setAttribute("opacity", "1");
-    dP.setAttribute("cx", px); dP.setAttribute("cy", Y(prices[i])); dP.setAttribute("opacity", "1");
-    dF.setAttribute("cx", px); dF.setAttribute("cy", Y(fair[i])); dF.setAttribute("opacity", "1");
-    showTip(t, `<div class="t-date">${data[i][0]}</div><div style="color:var(--acc)">Kurs: ${kr(prices[i])}</div><div style="color:var(--ai)">AI-estimat: ${kr(fair[i])}</div>`);
-  };
-  const clear = () => { vline.setAttribute("opacity", "0"); dP.setAttribute("opacity", "0"); dF.setAttribute("opacity", "0"); hideTip(); };
-  overlay.addEventListener("mousemove", move); overlay.addEventListener("mouseleave", clear);
-  overlay.addEventListener("touchmove", move, { passive: true }); overlay.addEventListener("touchend", clear);
-
-  // --- Ekspertens vurdering nå ---
-  const fairNow = fair[n - 1];
-  const gap = ((q.price - fairNow) / fairNow) * 100; // + = dyrere enn AI-estimat
-  const peerAvgPe = avg(STB_DATA.peers.filter((p) => !p.isSubject).map((p) => p.pe));
-  const peerAvgY = avg(STB_DATA.peers.filter((p) => !p.isSubject).map((p) => p.dividendYield));
-  const ret1y = oneYearRet(STB_PRICES.oneY);
-
-  let rating, ratingCls;
-  if (gap > 6) { rating = "Dyr priset"; ratingCls = "down"; }
-  else if (gap < -6) { rating = "Billig priset"; ratingCls = "up"; }
-  else { rating = "Rimelig priset"; ratingCls = "neutral"; }
-  document.getElementById("ai-badge").innerHTML = `<span class="ai-badge ${ratingCls}">AI-ekspert: ${rating}</span>`;
-
-  // Signaler
-  const signals = [
-    sig("Verdi vs. kurs", gap <= 0, `Kursen er ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-estimatet`),
-    sig("Kursmål", q.price <= q.analystTarget, `${nf1.format(Math.abs((q.price / q.analystTarget - 1) * 100))} % ${q.price <= q.analystTarget ? "opp til" : "over"} analytikernes mål`),
-    sig("P/E vs. bransjen", q.peTtm <= peerAvgPe, `P/E ${nf1.format(q.peTtm)} mot snitt ${nf1.format(peerAvgPe)}`),
-    sig("Utbytte vs. bransjen", q.dividendYield >= peerAvgY, `${nf1.format(q.dividendYield)} % mot snitt ${nf1.format(peerAvgY)} %`),
-    sig("Soliditet", k.solvency >= 175, `Solvens ${k.solvency} % ${k.solvency >= 175 ? "gir rom for tilbakekjøp" : ""}`),
-  ];
-  const sc = signals.filter((s) => s.good).length - signals.filter((s) => !s.good).length;
-  const chips = document.getElementById("ai-signals");
-  signals.forEach((s) => chips.appendChild(h(`<span class="ai-chip ${s.good ? "good" : "bad"}">${s.good ? "▲" : "▼"} ${s.label}<span class="ai-chip-sub">${s.detail}</span></span>`)));
-
-  // Ekspertens tekstlige mening – samkjørt med badge-vurderingen.
-  const fundament = sc >= 2 ? "trekker i positiv retning" : sc <= -2 ? "trekker i negativ retning" : "er blandet";
-  document.getElementById("ai-rationale").innerHTML =
-    `Etter en oppgang på ${pct1(ret1y)} det siste året handles Storebrand nå ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-ekspertens estimerte verdi på ${kr(fairNow, 0)}. ` +
-    `Verdsettelsen (P/E ${nf1.format(q.peTtm)}) er ${q.peTtm <= peerAvgPe ? "lavere" : "høyere"} enn snittet for lignende selskaper (${nf1.format(peerAvgPe)}), direkteavkastningen er ${nf1.format(q.dividendYield)} %, og solvensmarginen på ${k.solvency} % ${k.solvency >= 175 ? "gir rom for fortsatte tilbakekjøp" : "er solid"}. ` +
-    `AI-ekspertens konklusjon: aksjen ser <strong>${rating.toLowerCase()}</strong> ut mot sin egen verdibane, mens verdsettelse og soliditet ${fundament}.`;
+  draw();
 }
 const avg = (a) => a.reduce((s, v) => s + v, 0) / a.length;
 const sig = (label, good, detail) => ({ label, good, detail });
