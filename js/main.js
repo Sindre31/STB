@@ -245,6 +245,8 @@ function renderRangeMeter() {
   m.appendChild(h(`<div class="flag" style="left:${tgt}%;top:16px;color:var(--peer)">Mål ${kr(q.analystTarget, 0)}</div>`));
   document.getElementById("range-low").textContent = nf0.format(q.week52Low);
   document.getElementById("range-high").textContent = nf0.format(q.week52High);
+  const cntEl = document.getElementById("analyst-count");
+  if (cntEl && q.analystCount) cntEl.textContent = ` (${q.analystRating || "snitt"}, ${q.analystCount} analytikere)`;
 }
 
 /* ---------- Selskap + segmenter ---------- */
@@ -274,7 +276,10 @@ function renderDividends() {
     bars.appendChild(h(`<div class="colbar"><span class="amt" style="color:${isCut ? "var(--down)" : "var(--tx)"}">${isCut ? "0" : nf2.format(d.amount)}</span><div class="bar" style="height:${hpx}px;background:${isCut ? "var(--down)" : "var(--acc)"}"></div><span class="yr">${d.year}</span></div>`));
   });
   const st = STB_DATA.dividendStats;
-  const stats = [["Direkteavkastning", nf2.format(STB_DATA.quote.dividendYield) + " %"], ["Utdelingsgrad", nf0.format(st.payoutRatio) + " %"], ["Vekst siste år", pct1(st.oneYearGrowthPct)]];
+  // Utdelingsgrad beregnes live fra siste utbytte / resultat per aksje (fallback til lagret verdi).
+  const lastDiv = divs[divs.length - 1].amount;
+  const payout = STB_DATA.quote.epsTtm ? (lastDiv / STB_DATA.quote.epsTtm) * 100 : st.payoutRatio;
+  const stats = [["Direkteavkastning", nf1.format(STB_DATA.quote.dividendYield) + " %"], ["Utdelingsgrad", nf0.format(payout) + " %"], ["Vekst siste år", pct1(st.oneYearGrowthPct)]];
   const g = document.getElementById("div-stats");
   stats.forEach(([l, v]) => g.appendChild(h(`<div class="ministat"><div class="label">${l}</div><div class="val">${v}</div></div>`)));
 

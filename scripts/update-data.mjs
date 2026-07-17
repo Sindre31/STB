@@ -58,14 +58,15 @@ async function getCrumb() {
   return { crumb, cookies };
 }
 
+const REC_NO = { strong_buy: "Sterkt kjøp", buy: "Kjøp", hold: "Hold", sell: "Selg", strong_sell: "Sterkt salg" };
 async function fetchFundamentals(ticker, auth) {
   const url =
     `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}` +
-    `?modules=summaryDetail,defaultKeyStatistics&crumb=${encodeURIComponent(auth.crumb)}`;
+    `?modules=summaryDetail,defaultKeyStatistics,financialData&crumb=${encodeURIComponent(auth.crumb)}`;
   const res = await fetch(url, { headers: { "User-Agent": UA, Cookie: auth.cookies } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const d = (await res.json())?.quoteSummary?.result?.[0] || {};
-  const sd = d.summaryDetail || {}, ks = d.defaultKeyStatistics || {};
+  const sd = d.summaryDetail || {}, ks = d.defaultKeyStatistics || {}, fd = d.financialData || {};
   const raw = (o, k) => (o[k] && typeof o[k] === "object" ? o[k].raw : undefined);
   return {
     peTtm: round(raw(sd, "trailingPE")),
@@ -74,6 +75,9 @@ async function fetchFundamentals(ticker, auth) {
     marketCap: round(raw(sd, "marketCap") / 1e9),
     epsTtm: round(raw(ks, "trailingEps")),
     beta: round(raw(sd, "beta")),
+    analystTarget: round(raw(fd, "targetMeanPrice")),
+    analystRating: REC_NO[fd.recommendationKey] || undefined,
+    analystCount: raw(fd, "numberOfAnalystOpinions"),
   };
 }
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null && !Number.isNaN(v)));
