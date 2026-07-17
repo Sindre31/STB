@@ -22,12 +22,12 @@ const STB_DATA = {
     markets: "Norge og Sverige",
     subsidiaries: ["Storebrand Livsforsikring", "SPP (Sverige)", "Storebrand Asset Management", "SKAGEN Fondene", "Storebrand Bank", "Kron"],
     subsidiariesDetailed: [
-      { name: "Storebrand Livsforsikring", desc: "pensjon og livsforsikring i Norge" },
-      { name: "SPP", desc: "livsforsikring og tjenestepensjon i Sverige" },
-      { name: "Storebrand Asset Management", desc: "kapitalforvaltning – Norges største private forvalter" },
-      { name: "SKAGEN Fondene", desc: "aktivt forvaltede aksje- og rentefond" },
-      { name: "Storebrand Bank", desc: "bank- og sparetjenester til privatkunder" },
-      { name: "Kron", desc: "digital spare- og fondsplattform" },
+      { name: "Storebrand Livsforsikring", desc: "pensjon og livsforsikring i Norge", market: "Norge", size: "Kjernevirksomhet – stor", info: "Konsernets norske livselskap. Leverer tjenestepensjon, privat pensjonssparing og livsforsikring, og forvalter de garanterte pensjonsporteføljene. En av de største aktørene innen norsk privat tjenestepensjon." },
+      { name: "SPP", desc: "livsforsikring og tjenestepensjon i Sverige", market: "Sverige", size: "Kjernevirksomhet – stor", info: "Storebrands svenske virksomhet. Tilbyr tjenestepensjon og livsforsikring i Sverige og utgjør konsernets nest største marked etter Norge." },
+      { name: "Storebrand Asset Management", desc: "kapitalforvaltning – Norges største private forvalter", market: "Norden", size: "Størst målt i forvaltningskapital", info: "Norges største private kapitalforvalter. Forvalter storparten av konsernets rundt 1 660 mrd. kroner, med tydelig bærekraftsprofil. Inkluderer fondsvirksomheten Delphi og Storebrand Fonder i Sverige." },
+      { name: "SKAGEN Fondene", desc: "aktivt forvaltede aksje- og rentefond", market: "Stavanger / globalt", size: "Mellomstor", info: "Stavanger-basert fondsforvalter kjent for aktivt forvaltede globale aksje- og rentefond. Kjøpt av Storebrand i 2017 og en del av kapitalforvaltningsområdet." },
+      { name: "Storebrand Bank", desc: "bank- og sparetjenester til privatkunder", market: "Norge", size: "Mindre", info: "Privatbank med boliglån, sparing og dagligbanktjenester. Støtter opp under konsernets sparings- og pensjonskunder." },
+      { name: "Kron", desc: "digital spare- og fondsplattform", market: "Norge", size: "Liten, voksende", info: "Digital spare- og fondsplattform som retter seg mot yngre sparere. Kjøpt i 2021 for å styrke det digitale sparetilbudet." },
     ],
     description:
       "Storebrand (grunnlagt 1767, hovedkontor på Lysaker) er blant Nordens ledende innen livsforsikring og pensjon, og Norges største private kapitalforvalter med rundt 1 660 mrd. kroner til forvaltning og over to millioner kunder i Norge og Sverige. Inntjeningen kombinerer volumbaserte forvaltningshonorarer med risikobaserte inntekter fra forsikring. Folketrygdfondet er største aksjonær med rundt 11 %.",
@@ -57,6 +57,9 @@ const STB_DATA = {
     beta: 0.52,
     analystRating: "Kjøp",
     analystTarget: 184.10,
+    analystHigh: 220,
+    analystLow: 124,
+    analystCount: 10,
     revenueTtm: 108.29, // mrd NOK
     netIncomeTtm: 4.85, // mrd NOK
     sharesOutstanding: 420.25, // millioner
@@ -90,12 +93,22 @@ const STB_DATA = {
       "Styrets ambisjon er å betale et ordinært utbytte per aksje på minst samme nominelle beløp som året før, forutsatt en bærekraftig solvensmargin over 150 %. Er solvensmarginen over 175 %, vil styret vurdere ekstraordinært utbytte eller tilbakekjøp av aksjer.",
   },
 
-  // Driftsresultat per segment, Q2 2026 (mill. kr)
+  // Kontantresultat per segment, Q2 2026 (mill. kr). growthPct = rapportert endring å/å,
+  // brukes til å utlede fjorårets kvartal (Q2 2025) for utviklingsvisningen.
   segments: [
-    { name: "Sparing", value: 708, growth: "+12 %" },
-    { name: "Forsikring", value: 480, growth: "+66 %" },
-    { name: "Garantert pensjon", value: 424, growth: "+19 %" },
-    { name: "Øvrig", value: 187, growth: null },
+    { name: "Sparing", value: 708, growth: "+12 %", growthPct: 12 },
+    { name: "Forsikring", value: 480, growth: "+66 %", growthPct: 66 },
+    { name: "Garantert pensjon", value: 424, growth: "+19 %", growthPct: 19 },
+    { name: "Øvrig", value: 187, growth: null, growthPct: null },
+  ],
+
+  // Ekte årlige nøkkeltall (stockanalysis.com / Storebrand-rapporter). eps i kr, netIncome i mill. kr.
+  // Brukes til P/E- og resultatutvikling. P/E per år regnes ut mot årsslutt-kurs i prisserien.
+  financialsHistory: [
+    { year: 2022, eps: 5.04, netIncome: 2376 },
+    { year: 2023, eps: 7.31, netIncome: 3377 },
+    { year: 2024, eps: 12.48, netIncome: 5522 },
+    { year: 2025, eps: 11.69, netIncome: 5023 },
   ],
 
   // Forvaltningskapital (AUM) per år, mrd NOK
@@ -159,8 +172,16 @@ const STB_DATA = {
   },
 
   insiders: {
-    note: "Primærinnsidere i Storebrand har i hovedsak vært nettokjøpere det siste året — et signal markedet gjerne tolker som positivt, men det er ingen garanti for fremtidig kursutvikling.",
+    note: "Primærinnsidere i Storebrand har i hovedsak vært nettokjøpere det siste året — et signal markedet gjerne tolker som positivt, men det er ingen garanti for fremtidig kursutvikling. Kilde: børsmeldinger via Cision/MFN.",
     transactions: [
+      {
+        date: "April 2026",
+        name: "Martin Skancke (styremedlem)",
+        role: "Styret",
+        type: "Kjøp",
+        shares: 1500,
+        price: 171.00,
+      },
       {
         date: "22.10.2025",
         name: "Janne Flessum",

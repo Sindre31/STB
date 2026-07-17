@@ -59,12 +59,55 @@ function h(html) { const t = document.createElement("template"); t.innerHTML = h
 /* ---------- Tooltip ---------- */
 const tooltip = document.getElementById("tooltip");
 function showTip(evt, html) {
+  tooltip.classList.remove("wide");
   tooltip.innerHTML = html;
   tooltip.style.left = evt.clientX + "px";
   tooltip.style.top = evt.clientY + "px";
   tooltip.classList.add("show");
 }
 const hideTip = () => tooltip.classList.remove("show");
+
+/* ---------- Info-tegn ved finansuttrykk ---------- */
+const GLOSSARY = {
+  marketcap: ["Markedsverdi", "Antall aksjer ganget med aksjekursen — hva hele selskapet er verdt på børsen akkurat nå."],
+  pe: ["P/E (Price/Earnings)", "Kurs delt på resultat per aksje. Sier hvor mange års overskudd du betaler for én aksje. Lav P/E kan bety billig — eller lave vekstforventninger."],
+  yield: ["Direkteavkastning", "Årlig utbytte delt på aksjekursen, i prosent. Viser den løpende utbytteavkastningen ved dagens kurs."],
+  eps: ["Resultat per aksje (EPS)", "Selskapets overskudd fordelt på antall aksjer. Grunnlaget i P/E-brøken."],
+  pb: ["Pris/Bok (P/B)", "Kurs delt på bokført egenkapital per aksje. Under 1 betyr at aksjen prises lavere enn den bokførte verdien."],
+  solvency: ["Solvensmargin", "Forholdet mellom kapitalen forsikringsselskapet har og kapitalen myndighetene krever. Over 100 % betyr buffer utover minstekravet; Storebrands eget mål er minst 130 %."],
+  combined: ["Combined ratio", "Erstatninger pluss kostnader delt på premieinntekter i skadeforsikring. Under 100 % betyr at forsikringsdriften går med overskudd."],
+  roe: ["Egenkapitalavkastning (ROE)", "Overskuddet målt mot egenkapitalen — hvor godt selskapet forrenter eiernes penger."],
+  cashroe: ["Kontant-ROE", "Egenkapitalavkastning basert på kontantresultatet (kontantstrømmen), som Storebrand styrer utbytte og tilbakekjøp etter."],
+  aum: ["Forvaltningskapital (AUM)", "Samlede kundemidler selskapet forvalter. Storebrand tjener honorarer på denne kapitalen."],
+  payout: ["Utdelingsgrad", "Andelen av overskuddet som betales ut som utbytte."],
+  volatility: ["Volatilitet", "Hvor mye kursen svinger, målt som årlig standardavvik i avkastningen. Høyere tall betyr større kursutslag og mer usikkerhet."],
+  beta: ["Beta", "Hvor mye aksjen svinger i forhold til markedet. Under 1 betyr mindre svingninger enn børsen samlet."],
+};
+const infoIcon = (term) => GLOSSARY[term] ? `<span class="info-i" data-term="${term}" role="button" tabindex="0" aria-label="Forklaring">i</span>` : "";
+function wireInfoIcons() {
+  document.querySelectorAll(".info-i[data-term]").forEach((ic) => {
+    const g = GLOSSARY[ic.getAttribute("data-term")];
+    if (!g) return;
+    const show = (e) => { e.stopPropagation(); tooltip.classList.add("wide"); tooltip.innerHTML = `<strong>${g[0]}</strong><br>${g[1]}`; tooltip.style.left = (e.touches ? e.touches[0].clientX : e.clientX) + "px"; tooltip.style.top = (e.touches ? e.touches[0].clientY : e.clientY) + "px"; tooltip.classList.add("show"); };
+    ic.addEventListener("mouseenter", show);
+    ic.addEventListener("mouseleave", hideTip);
+    ic.addEventListener("click", show);
+  });
+}
+
+/* ---------- Modal / popup ---------- */
+const modalEl = document.getElementById("modal");
+function openModal(title, content) {
+  document.getElementById("modal-title").textContent = title;
+  const c = document.getElementById("modal-content");
+  c.innerHTML = "";
+  if (typeof content === "string") c.innerHTML = content; else c.appendChild(content);
+  modalEl.hidden = false;
+}
+const closeModal = () => { modalEl.hidden = true; };
+document.getElementById("modal-close").addEventListener("click", closeModal);
+modalEl.addEventListener("click", (e) => { if (e.target === modalEl) closeModal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modalEl.hidden) closeModal(); });
 
 /* ---------- Stale-varsel ---------- */
 (function staleCheck() {
@@ -85,7 +128,7 @@ const hideTip = () => tooltip.classList.remove("show");
 
 /* ---------- Nav + header ---------- */
 const NAV = [
-  ["oversikt", "Oversikt"], ["kurs", "Kurs"], ["ai", "AI-ekspert"], ["selskap", "Selskap"],
+  ["oversikt", "Oversikt"], ["kurs", "Kurs"], ["ai", "AI-ekspert"], ["analytikere", "Analytikere"], ["selskap", "Selskap"],
   ["utbytte", "Utbytte"], ["nokkeltall", "Nøkkeltall"], ["rapporter", "Rapporter"],
   ["innsidehandel", "Innsidehandel"], ["sammenligning", "Sammenligning"], ["nyheter", "Nyheter"], ["kilder", "Kilder"],
 ];
@@ -106,16 +149,19 @@ function renderHeader() {
 function renderStats() {
   const q = STB_DATA.quote, k = STB_DATA.kpis;
   const tiles = [
-    ["Kurs", kr(q.price), pct1(q.changePct) + " i dag"],
-    ["Markedsverdi", nf1.format(q.marketCap) + " mrd", "NOK"],
-    ["P/E", nf1.format(q.peTtm), "Siste 12 mnd"],
-    ["Direkteavkastning", nf1.format(q.dividendYield) + " %", "Utbytte/kurs"],
-    ["Solvensmargin", k.solvency + " %", "Bufferkapital"],
-    ["Avkastning 1 år", pct1(oneYearRet(STB_PRICES.oneY) ?? q.perf.oneY), "Kursutvikling"],
+    { label: "Kurs", val: kr(q.price), sub: pct1(q.changePct) + " i dag" },
+    { label: "Markedsverdi", info: "marketcap", val: nf1.format(q.marketCap) + " mrd", sub: "NOK" },
+    { label: "P/E", info: "pe", val: nf1.format(q.peTtm), sub: "Siste 12 mnd", pop: showPeHistory },
+    { label: "Direkteavkastning", info: "yield", val: nf1.format(q.dividendYield) + " %", sub: "Utbytte/kurs", pop: showYieldHistory },
+    { label: "Solvensmargin", info: "solvency", val: k.solvency + " %", sub: "Bufferkapital" },
+    { label: "Avkastning 1 år", val: pct1(oneYearRet(STB_PRICES.oneY) ?? q.perf.oneY), sub: "Kursutvikling" },
   ];
   const g = document.getElementById("stat-grid");
-  tiles.forEach(([label, val, sub]) => {
-    g.appendChild(h(`<div class="stat"><div class="label">${label}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`));
+  tiles.forEach((t) => {
+    const hint = t.pop ? `<div class="click-hint">Klikk for utvikling ▸</div>` : "";
+    const node = h(`<div class="stat${t.pop ? " clickable" : ""}"><div class="label">${t.label}${t.info ? infoIcon(t.info) : ""}</div><div class="val">${t.val}</div><div class="sub">${t.sub}</div>${hint}</div>`);
+    if (t.pop) node.addEventListener("click", t.pop);
+    g.appendChild(node);
   });
 }
 
@@ -308,7 +354,7 @@ function renderAiExpert() {
       ["Treffrate retning", bt.rate == null ? "–" : nf0.format(bt.rate) + " %"],
       ["Testede signaler", bt.total ? nf0.format(bt.total) : "–"],
       ["Snittavk./signal", bt.avgFollow == null ? "–" : pct1(bt.avgFollow)],
-      ["Årlig volatilitet", nf0.format(volAnnual) + " %"],
+      ["Årlig volatilitet" + infoIcon("volatility"), nf0.format(volAnnual) + " %"],
     ].forEach(([l, v]) => track.appendChild(h(`<div class="ministat"><div class="label">${l}</div><div class="val">${v}</div></div>`)));
   }
 
@@ -529,9 +575,9 @@ function renderKeyFigures() {
   meter.appendChild(h(`<div class="tick" style="left:${(175 / scale) * 100}%;background:var(--down)"></div>`));
   meter.appendChild(h(`<div class="flag" style="left:${(175 / scale) * 100}%;top:18px;color:var(--down)">175 % terskel</div>`));
 
-  const stats = [["Combined ratio", k.combinedRatioQ + " %"], ["Egenkapitalavk.", k.roeTtm + " %"], ["Kontant-ROE", k.roeCashAnnualized + " %"], ["Markedsandel skade", nf1.format(k.retailPcMarketShare) + " %"]];
+  const stats = [["Combined ratio", k.combinedRatioQ + " %", "combined"], ["Egenkapitalavk.", k.roeTtm + " %", "roe"], ["Kontant-ROE", k.roeCashAnnualized + " %", "cashroe"], ["Markedsandel skade", nf1.format(k.retailPcMarketShare) + " %"]];
   const g = document.getElementById("key-stats");
-  stats.forEach(([l, v]) => g.appendChild(h(`<div class="ministat"><div class="label">${l}</div><div class="val">${v}</div></div>`)));
+  stats.forEach(([l, v, info]) => g.appendChild(h(`<div class="ministat"><div class="label">${l}${info ? infoIcon(info) : ""}</div><div class="val">${v}</div></div>`)));
 
   const aum = STB_DATA.aumHistory, maxAum = Math.max(...aum.map((a) => a.value));
   const ab = document.getElementById("aum-bars");
@@ -617,6 +663,121 @@ function renderSources() {
   STB_DATA.sources.forEach((s) => { const a = document.createElement("a"); a.href = s.url; a.target = "_blank"; a.rel = "noopener"; a.className = "src-pill"; a.textContent = s.label; list.appendChild(a); });
 }
 
+/* ---------- Historikk-popup (P/E, direkteavkastning) ---------- */
+// Årsslutt-kurs fra den månedlige maks-serien ("YYYY-MM").
+function yearEndClose(year) {
+  const rows = STB_PRICES.max.filter((d) => d[0].slice(0, 4) === String(year));
+  return rows.length ? rows[rows.length - 1][1] : null;
+}
+// Enkel linjegraf med merkede punkter for popup-bruk. points = [[label, value], ...].
+function historyChartSVG(points, fmt, color) {
+  color = color || "var(--acc)";
+  const W = 620, HH = 300, PADL = 54, PADR = 20, TOP = 22, BOT = 248;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${HH}`, class: "chart-svg" });
+  const vals = points.map((p) => p[1]);
+  let yMin = Math.min(...vals), yMax = Math.max(...vals);
+  if (yMin === yMax) { yMin -= 1; yMax += 1; }
+  const padY = (yMax - yMin) * 0.18 || 1; yMin = Math.max(0, yMin - padY); yMax += padY;
+  const n = points.length;
+  const X = (i) => PADL + (n === 1 ? 0.5 : i / (n - 1)) * (W - PADR - PADL);
+  const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
+  for (let s = 0; s <= 4; s++) {
+    const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v);
+    svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: yy, y2: yy, class: "chart-grid" }));
+    svg.appendChild(el("text", { x: PADL - 8, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, fmt(v)));
+  }
+  points.forEach((p, i) => svg.appendChild(el("text", { x: X(i), y: BOT + 22, "text-anchor": "middle", class: "chart-axis" }, p[0])));
+  let ap = ""; points.forEach((p, i) => (ap += (i ? " L " : "M ") + X(i) + " " + Y(p[1])));
+  svg.appendChild(el("path", { d: ap + ` L ${X(n - 1)} ${BOT} L ${X(0)} ${BOT} Z`, fill: color, "fill-opacity": "0.08", stroke: "none" }));
+  svg.appendChild(el("path", { d: ap, fill: "none", stroke: color, "stroke-width": "2.4" }));
+  points.forEach((p, i) => {
+    svg.appendChild(el("circle", { cx: X(i), cy: Y(p[1]), r: 4, fill: color }));
+    svg.appendChild(el("text", { x: X(i), y: Y(p[1]) - 10, "text-anchor": "middle", class: "chart-axis", fill: color, "font-weight": "600" }, fmt(p[1])));
+  });
+  return svg;
+}
+function showPeHistory() {
+  const q = STB_DATA.quote;
+  const pts = STB_DATA.financialsHistory
+    .map((f) => { const yc = yearEndClose(f.year); return yc && f.eps ? [String(f.year), yc / f.eps] : null; })
+    .filter(Boolean);
+  pts.push(["Nå", q.peTtm]);
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">P/E = kurs delt på resultat per aksje. Historiske punkter bruker årsslutt-kurs og selskapets rapporterte årlige EPS; «Nå» bruker dagens kurs og resultat siste 12 mnd.</div>`));
+  wrap.appendChild(historyChartSVG(pts, (v) => nf1.format(v), "var(--acc)"));
+  wrap.appendChild(h(`<p class="ntext" style="margin-top:14px;color:var(--mut)">Årlig EPS: ${STB_DATA.financialsHistory.map((f) => f.year + " " + nf2.format(f.eps) + " kr").join(" · ")} · nå ${nf2.format(q.epsTtm)} kr.</p>`));
+  openModal("P/E-utvikling", wrap);
+}
+function showYieldHistory() {
+  const yrNow = new Date().getFullYear();
+  const pts = STB_DATA.dividends
+    .map((d) => { const yc = d.year >= yrNow ? STB_DATA.quote.price : yearEndClose(d.year); return yc ? [String(d.year), (d.amount / yc) * 100] : null; })
+    .filter(Boolean);
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">Direkteavkastning = utbytte delt på kurs. Beregnet som utbyttet betalt i året delt på årsslutt-kursen (siste år mot dagens kurs). 2020 var utbyttet kuttet til null.</div>`));
+  wrap.appendChild(historyChartSVG(pts, (v) => nf1.format(v) + " %", "var(--peer)"));
+  openModal("Direkteavkastning over tid", wrap);
+}
+function showSegmentDev() {
+  const segs = STB_DATA.segments;
+  const withPrev = segs.map((s) => ({ ...s, prev: s.growthPct != null ? s.value / (1 + s.growthPct / 100) : null }));
+  const maxV = Math.max(...segs.map((s) => s.value));
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">Kontantresultat per segment, Q2 2026 mot samme kvartal året før (mill. kr). Fjorårstallet er utledet fra selskapets rapporterte vekst år over år.</div>`));
+  withPrev.forEach((s) => {
+    const barNow = (s.value / maxV) * 100, barPrev = s.prev != null ? (s.prev / maxV) * 100 : 0;
+    wrap.appendChild(h(`<div class="seg-row" style="margin-bottom:14px;"><div class="seg-head"><span>${s.name}${s.growth ? ` <span style="color:var(--up)">${s.growth}</span>` : ""}</span><span class="mono">${nf0.format(s.value)}${s.prev != null ? ` <span style="color:var(--mut)">(${nf0.format(s.prev)})</span>` : ""}</span></div><div class="seg-track"><div class="seg-fill" style="width:${barNow}%"></div></div>${s.prev != null ? `<div class="seg-track" style="margin-top:4px;"><div class="seg-fill" style="width:${barPrev}%;background:var(--mut);opacity:.55"></div></div>` : ""}</div>`));
+  });
+  wrap.appendChild(h(`<div class="pop-legend"><span><span style="color:var(--acc)">▮</span> Q2 2026</span><span><span style="color:var(--mut)">▮</span> Q2 2025 (avledet)</span></div>`));
+  openModal("Kontantresultat per segment – utvikling", wrap);
+}
+function showCompanies() {
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">Sentrale selskaper i Storebrand-konsernet, hvilket marked de dekker og hvor store de er. Konsernet forvalter samlet rundt 1 660 mrd. kroner.</div>`));
+  const cards = document.createElement("div"); cards.className = "modal-cards";
+  STB_DATA.company.subsidiariesDetailed.forEach((s) => {
+    cards.appendChild(h(`<div class="modal-card"><div class="mc-top"><span class="mc-name">${s.name}</span><span class="mc-size">${s.size}</span></div><div class="mc-market">${s.market} · ${s.desc}</div><div class="mc-info">${s.info}</div></div>`));
+  });
+  wrap.appendChild(cards);
+  openModal("Sentrale selskaper i konsernet", wrap);
+}
+
+/* ---------- Analytikernes kursmål ---------- */
+function renderAnalysts() {
+  const q = STB_DATA.quote;
+  const low = q.analystLow, high = q.analystHigh, mean = q.analystTarget, price = q.price;
+  const lo = Math.min(low, price) * 0.98, hi = Math.max(high, price) * 1.02;
+  const pos = (v) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+  const m = document.getElementById("analyst-meter");
+  m.appendChild(h(`<div class="fill grad" style="left:${pos(low)}%;width:${pos(high) - pos(low)}%"></div>`));
+  m.appendChild(h(`<div class="tick" style="left:${pos(mean)}%;background:var(--peer)"></div>`));
+  m.appendChild(h(`<div class="flag" style="left:${pos(mean)}%;top:-24px;color:var(--peer)">Snitt ${kr(mean, 0)}</div>`));
+  m.appendChild(h(`<div class="tick" style="left:${pos(price)}%;background:var(--tx)"></div>`));
+  m.appendChild(h(`<div class="flag" style="left:${pos(price)}%;top:12px;color:var(--tx)">Kurs ${kr(price, 0)}</div>`));
+  document.getElementById("analyst-low-lbl").textContent = nf0.format(low);
+  document.getElementById("analyst-high-lbl").textContent = nf0.format(high);
+
+  const upside = (t) => { const u = (t / price - 1) * 100; const c = u >= 0 ? "var(--up)" : "var(--down)"; return `<span style="color:${c}">${pct1(u)}</span>`; };
+  const rows = [
+    ["Høyeste kursmål", high, upside(high)],
+    ["Gjennomsnitt (konsensus)", mean, upside(mean)],
+    ["Laveste kursmål", low, upside(low)],
+  ];
+  const tb = document.getElementById("analyst-table-body");
+  rows.forEach(([label, val, up]) => tb.appendChild(h(`<tr><td>${label}</td><td class="num">${nf0.format(val)}</td><td class="num">${up}</td></tr>`)));
+  document.getElementById("analyst-note").innerHTML =
+    `Konsensus er <strong>${q.analystRating || "–"}</strong> basert på ${q.analystCount || "flere"} analytikere. ` +
+    `Gjennomsnittsmålet ligger ${pct1((mean / price - 1) * 100)} mot dagens kurs på ${kr(price, 0)}. ` +
+    `Kilde: Yahoo Finance (oppdateres automatisk).`;
+}
+
+function wirePopups() {
+  const seg = document.getElementById("segment-title");
+  if (seg) seg.addEventListener("click", showSegmentDev);
+  const comp = document.getElementById("company-subs-title");
+  if (comp) comp.addEventListener("click", showCompanies);
+}
+
 renderNav();
 renderHeader();
 renderStats();
@@ -624,6 +785,7 @@ renderPriceChart();
 renderRangeMeter();
 renderAiExpert();
 renderAiView();
+renderAnalysts();
 renderCompany();
 renderDividends();
 renderKeyFigures();
@@ -632,3 +794,5 @@ renderInsiders();
 renderComparison();
 renderNews();
 renderSources();
+wirePopups();
+wireInfoIcons();
