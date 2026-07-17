@@ -488,8 +488,42 @@ function renderAiExpert() {
     if (fwd > 0) txt += `Anslag ${fwd} måneder frem: <strong>~${kr(fVals[fwd - 1], 0)}</strong>, med et usikkerhetsbånd på ±${nf0.format(bandPct(fwd) * 100)} % utledet fra aksjens faktiske volatilitet (${nf0.format(volAnnual)} % årlig). `;
     txt += `Historisk har retningssignalet truffet ${bt.rate == null ? "–" : nf0.format(bt.rate) + " %"} av gangene på ${bt.total} tester siste år. Konklusjon: aksjen ser <strong>${rating.toLowerCase()}</strong> ut mot sin egen verdibane, mens verdsettelse og soliditet ${fundament}.`;
     document.getElementById("ai-rationale").innerHTML = txt;
+
+    aiState = { rating, gap, fairEnd, anchors, anchorAvg, sc, signals, volAnnual, bt, peerAvgPe, ret1y, fwd, fLast: fwd > 0 ? fVals[fwd - 1] : null, target };
   }
   draw();
+
+  const methodBtn = document.getElementById("ai-method-btn");
+  if (methodBtn) methodBtn.addEventListener("click", () => openModal("Hvordan AI-modellen tenker", buildMethodModal()));
+}
+let aiState = {};
+function buildMethodModal() {
+  const s = aiState, q = STB_DATA.quote;
+  const pos = s.signals ? s.signals.filter((x) => x.good).length : 0;
+  const neg = s.signals ? s.signals.filter((x) => !x.good).length : 0;
+  const anchorTxt = s.anchors ? s.anchors.map((a) => `${a.label} (${kr(a.value, 0)})`).join(", ") : "–";
+  const usesLLM = typeof STB_AI_VIEW !== "undefined" && STB_AI_VIEW.body;
+  const wrap = document.createElement("div");
+  wrap.innerHTML =
+    `<div class="modal-sub">Modellen er <strong>ikke en svart boks</strong>. Den kjører åpent i nettleseren på de ekte tallene på siden, og hvert steg kan etterprøves. Den er et beslutningsstøtte-verktøy, ikke et kjøps- eller salgsråd.</div>` +
+    `<div class="method-h">Metodene den bruker</div>` +
+    `<ul class="method-list">` +
+    `<li><strong>Verdilinje:</strong> et glidende gjennomsnitt av kursen som gradvis trekkes mot en fundamental verdi (mean reversion).</li>` +
+    `<li><strong>Fundamental forankring:</strong> snittet av flere uavhengige ankere — ${anchorTxt} — gir ${s.anchorAvg ? kr(s.anchorAvg, 0) : "–"}.</li>` +
+    `<li><strong>Sju signaler:</strong> verdi vs. kurs, analytikermål, P/E og utbytte mot bransjen, relativ styrke, 52-ukers posisjon og soliditet.</li>` +
+    `<li><strong>Fremtidsprojeksjon:</strong> konvergerer mot den fundamentale verdien, med et usikkerhetsbånd utledet fra aksjens <em>faktiske</em> volatilitet (${s.volAnnual != null ? nf0.format(s.volAnnual) + " % årlig" : "–"}).</li>` +
+    `<li><strong>Backtest:</strong> retningssignalet testes kausalt på siste års kurser — treffrate ${s.bt && s.bt.rate != null ? nf0.format(s.bt.rate) + " %" : "–"} på ${s.bt ? s.bt.total : "–"} tester.</li>` +
+    `<li><strong>Språkmodell (valgfri):</strong> en Anthropic Claude-modell skriver en kort kommentar ut fra de ferske tallene. ${usesLLM ? "Aktiv nå." : "Ikke aktiv (krever API-nøkkel) — den regelbaserte vurderingen brukes i stedet."}</li>` +
+    `</ul>` +
+    `<div class="method-h">Hvorfor konklusjonen «${s.rating || "–"}» akkurat nå</div>` +
+    `<p class="ntext" style="color:var(--tx)">Kursen (${kr(q.price, 0)}) ligger ${s.gap != null ? nf1.format(Math.abs(s.gap)) + " % " + (s.gap >= 0 ? "over" : "under") : "–"} den estimerte verdien (${s.fairEnd != null ? kr(s.fairEnd, 0) : "–"}). ` +
+    `Av de sju signalene peker <strong style="color:var(--up)">${pos} positivt</strong> og <strong style="color:var(--down)">${neg} negativt</strong> (nettoscore ${s.sc >= 0 ? "+" : ""}${s.sc}). ` +
+    `Grensen for «dyr»/«billig» er ±6 % mot verdilinja; innenfor det kalles den «rimelig priset».</p>` +
+    `<div class="method-sig" id="method-sig"></div>` +
+    `<p class="ntext" style="margin-top:14px;color:var(--mut)">Modellen forutsier ikke fremtiden og tar ikke høyde for nyheter eller hendelser som ikke ligger i tallene. Bruk den som ett av flere verktøy.</p>`;
+  const sigBox = wrap.querySelector("#method-sig");
+  if (s.signals) s.signals.forEach((x) => sigBox.appendChild(h(`<span class="ai-chip ${x.good ? "good" : "bad"}">${x.good ? "▲" : "▼"} ${x.label}<span class="ai-chip-sub">${x.detail}</span></span>`)));
+  return wrap;
 }
 const avg = (a) => a.reduce((s, v) => s + v, 0) / a.length;
 const sig = (label, good, detail) => ({ label, good, detail });
