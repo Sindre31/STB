@@ -5,46 +5,46 @@ const STB_LIVE = {
   "updated": "17. juli 2026",
   "dataDate": "2026-07-17",
   "quote": {
-    "price": 196.8,
-    "change": 0.1,
-    "changePct": 0.05,
+    "price": 197.2,
+    "change": 0.5,
+    "changePct": 0.25,
     "week52Low": 145.1,
     "week52High": 199.5,
-    "volume": 92608,
+    "volume": 94999,
     "peTtm": 17.25,
-    "peForward": 14.74,
+    "peForward": 14.7,
     "dividendYield": 2.72,
-    "marketCap": 82.39,
-    "epsTtm": 11.41,
+    "marketCap": 82.56,
+    "epsTtm": 11.43,
     "bookValue": 78.89,
-    "priceToBook": 2.49,
+    "priceToBook": 2.5,
     "analystTarget": 188.7,
     "analystHigh": 220,
     "analystLow": 124,
     "analystRating": "Kjøp",
     "analystCount": 10,
     "perf": {
-      "oneY": 33.2,
-      "fiveY": 160.4,
-      "sinceGraph": 363.8
+      "oneY": 33.4,
+      "fiveY": 160.9,
+      "sinceGraph": 364.8
     }
   },
   "peers": {
     "STB.OL": {
       "pe": 17.25,
       "dividendYield": 2.72,
-      "marketCap": 82.39,
-      "priceToBook": 2.49,
-      "price": 196.8,
-      "oneYearPct": 33.3
+      "marketCap": 82.56,
+      "priceToBook": 2.5,
+      "price": 197.2,
+      "oneYearPct": 33.6
     },
     "GJF.OL": {
-      "pe": 21.69,
+      "pe": 21.72,
       "dividendYield": 3.61,
-      "marketCap": 138.59,
-      "priceToBook": 7.23,
-      "price": 277.2,
-      "oneYearPct": -1.4
+      "marketCap": 138.79,
+      "priceToBook": 7.24,
+      "price": 277.6,
+      "oneYearPct": -1.3
     },
     "PROT.OL": {
       "pe": 19.7,
@@ -55,20 +55,20 @@ const STB_LIVE = {
       "oneYearPct": -5.9
     },
     "TRYG.CO": {
-      "pe": 20.95,
+      "pe": 20.97,
       "dividendYield": 5.48,
-      "marketCap": 92.9,
+      "marketCap": 92.96,
       "priceToBook": 2.6,
-      "price": 155.9,
-      "oneYearPct": -2.3
+      "price": 156,
+      "oneYearPct": -2.2
     },
     "SAMPO.HE": {
-      "pe": 15.82,
+      "pe": 15.83,
       "dividendYield": 3.78,
-      "marketCap": 25.48,
+      "marketCap": 25.49,
       "priceToBook": 3.12,
-      "price": 9.65,
-      "oneYearPct": 2
+      "price": 9.66,
+      "oneYearPct": 2.1
     }
   }
 };
