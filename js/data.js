@@ -111,6 +111,34 @@ const STB_DATA = {
     { year: 2025, eps: 11.69, netIncome: 5023 },
   ],
 
+  // Enkeltmeglerhus og deres kursmål – datert øyeblikksbilde (MarketScreener, juli 2026).
+  // Merk: dette oppdateres IKKE automatisk slik konsensus (snitt/høy/lav) gjør; det er en
+  // manuelt vedlikeholdt oversikt over hvem som mener hva, med dato for hver anbefaling.
+  analystTargets: {
+    asOf: "juli 2026",
+    source: "MarketScreener",
+    list: [
+      { firm: "Nordea", rating: "Kjøp", target: 218, date: "16.07.2026" },
+      { firm: "SEB", rating: "Kjøp", target: 218, date: "16.07.2026" },
+      { firm: "SpareBank 1 Markets", rating: "Kjøp", target: 216, date: "16.07.2026" },
+      { firm: "Pareto Securities", rating: "Kjøp", target: 215, date: "16.07.2026" },
+      { firm: "DNB Carnegie", rating: "Kjøp", target: 212, date: "16.07.2026" },
+      { firm: "Danske Bank", rating: "Kjøp", target: 200, date: "12.02.2026" },
+      { firm: "Arctic Securities", rating: "Kjøp", target: 192, date: "30.04.2026" },
+      { firm: "Kepler Cheuvreux", rating: "Kjøp", target: null, date: "25.06.2026" },
+      { firm: "JPMorgan", rating: "Undervekt", target: 150, date: "27.05.2026" },
+      { firm: "Keefe, Bruyette & Woods", rating: "Underperform", target: 143, date: "16.07.2026" },
+    ],
+  },
+
+  // Solvensmargin (Solvens II) ved årsslutt (%). Kilde: Storebrand kvartals-/årsrapporter.
+  solvencyHistory: [
+    { year: "2023", value: 191 },
+    { year: "2024", value: 200 },
+    { year: "2025", value: 194 },
+    { year: "Q2 2026", value: 200 },
+  ],
+
   // Forvaltningskapital (AUM) per år, mrd NOK
   aumHistory: [
     { year: 2021, value: 1097 },
