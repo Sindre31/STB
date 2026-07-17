@@ -33,10 +33,13 @@ const STB_DATA = {
       "Storebrand (grunnlagt 1767, hovedkontor på Lysaker) er blant Nordens ledende innen livsforsikring og pensjon, og Norges største private kapitalforvalter med rundt 1 660 mrd. kroner til forvaltning og over to millioner kunder i Norge og Sverige. Inntjeningen kombinerer volumbaserte forvaltningshonorarer med risikobaserte inntekter fra forsikring. Folketrygdfondet er største aksjonær med rundt 11 %.",
   },
 
-  // Eierstruktur – kun det som er offentlig kjent presenteres som eksakt.
+  // Eierstruktur – største aksjonærer (Proff.no / MarketScreener).
   ownershipBreakdown: [
-    { name: "Folketrygdfondet", pct: 11 },
-    { name: "Øvrige og frittflytende aksjonærer", pct: 89 },
+    { name: "Folketrygdfondet", pct: 11.23 },
+    { name: "Storebrand ASA (egne aksjer)", pct: 3.20 },
+    { name: "Nordea Investment Management (Norge)", pct: 1.86 },
+    { name: "Ole Morten Halvorsen", pct: 1.55 },
+    { name: "ODIN Forvaltning", pct: 1.47 },
   ],
 
   quote: {
@@ -184,7 +187,7 @@ const STB_DATA = {
   },
 
   ownership: {
-    note: "Folketrygdfondet er den klart største aksjonæren i Storebrand, med en eierandel på rundt 11 %. Se Storebrands investor-relations-sider for fullstendig og oppdatert aksjonærliste.",
+    note: "Folketrygdfondet er den klart største aksjonæren med rundt 11 %. Resten (~81 %) er spredt på institusjonelle og utenlandske eiere — aksjen er bredt eid. Kilde: Proff.no / MarketScreener.",
   },
 
   peers: [
@@ -217,6 +220,8 @@ const STB_DATA = {
     { label: "Storebrand — Strategi og forretningsmodell", url: "https://www.storebrand.no/en/investor-relations/our-strategy-and-business-model" },
     { label: "Storebrand — Årsrapporter", url: "https://www.storebrand.no/en/investor-relations/annual-reports" },
     { label: "Wikipedia — Storebrand (selskapsfakta)", url: "https://en.wikipedia.org/wiki/Storebrand" },
+    { label: "Proff.no — Storebrand ASA aksjonærer", url: "https://www.proff.no/aksjon%C3%A6rer/-/storebrand-asa/916300484" },
+    { label: "MarketScreener — Storebrand aksjonærer", url: "https://www.marketscreener.com/quote/stock/STOREBRAND-ASA-1413289/company/" },
     { label: "E24 — Storebrand vil kjøpe skadeforsikringsselskap", url: "https://e24.no/bors/nyheter/a/304763" },
   ],
 };

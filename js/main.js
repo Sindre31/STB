@@ -440,7 +440,8 @@ function renderInsiders() {
   bm.appendChild(h(`<div class="fill" style="width:50%"></div>`));
 
   const own = STB_DATA.ownershipBreakdown, ob = document.getElementById("ownership-bars");
-  own.forEach((o) => ob.appendChild(h(`<div class="seg-row"><div class="seg-head"><span>${o.name}</span><span class="mono" style="color:var(--mut)">${o.pct} %</span></div><div class="seg-track"><div class="seg-fill" style="width:${o.pct}%;background:var(--peer)"></div></div></div>`)));
+  const maxOwn = Math.max(...own.map((o) => o.pct));
+  own.forEach((o) => ob.appendChild(h(`<div class="seg-row"><div class="seg-head"><span>${o.name}</span><span class="mono" style="color:var(--mut)">${nf1.format(o.pct)} %</span></div><div class="seg-track"><div class="seg-fill" style="width:${(o.pct / maxOwn) * 100}%;background:var(--peer)"></div></div></div>`)));
   document.getElementById("ownership-note").textContent = STB_DATA.ownership.note;
 }
 
