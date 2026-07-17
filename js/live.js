@@ -28,8 +28,8 @@ const STB_LIVE = {
     "policyRateChg": 0.25,
     "fx": {
       "NOK": 1,
-      "DKK": 1.475,
-      "EUR": 11.035
+      "DKK": 1.473,
+      "EUR": 11.023
     },
     "perf": {
       "oneY": 32.5,
