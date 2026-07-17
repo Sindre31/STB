@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Storebrand (STB) – Aksjeoversikt</title>
-<meta name="description" content="Samlet oversikt over Storebrand-aksjen (STB): kurs og historikk, prediksjon, utbytte, solvens, innsidehandel, sammenligning med lignende nordiske selskaper og nyheter som kan påvirke kursen.">
+<meta name="description" content="Samlet oversikt over Storebrand-aksjen (STB): kurs og historikk, utbytte, solvens, innsidehandel, sammenligning med lignende nordiske selskaper og nyheter som kan påvirke kursen.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230a0e13%22/><text x=%2250%22 y=%2270%22 font-size=%2262%22 text-anchor=%22middle%22 fill=%22%23d9a952%22 font-family=%22monospace%22 font-weight=%22bold%22>S</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@
 <section id="oversikt">
   <div class="eyebrow">Oversikt</div>
   <h1 class="title">Storebrand-aksjen — full oversikt</h1>
-  <p class="lead big">Kurs og historikk, prediksjon, utbytte, solvens, innsidehandel og sammenligning med lignende nordiske selskaper — samlet på ett sted, med ekte data som oppdateres automatisk.</p>
+  <p class="lead big">Kurs og historikk, utbytte, solvens, innsidehandel og sammenligning med lignende nordiske selskaper — samlet på ett sted, med ekte data som oppdateres automatisk.</p>
   <div class="stats" id="stat-grid"></div>
 </section>
 
@@ -68,23 +68,6 @@
   </div>
 </section>
 
-<section id="prediksjon">
-  <div class="eyebrow">Prediksjon</div>
-  <h2 class="title">Prediktert vs. faktisk kurs</h2>
-  <p class="lead">En enkel trendmodell (glidende trend justert mot analytikernes kursmål) sammenlignet med faktisk månedskurs siste 12 måneder — og modellens anslag én måned frem, med usikkerhetsintervall.</p>
-  <div class="card">
-    <div class="cmp-legend" style="margin-bottom:10px;">
-      <span style="color:var(--acc);">— Faktisk kurs</span>
-      <span style="color:var(--peer);">- - Modell</span>
-      <span style="color:var(--mut);">▒ Usikkerhet (neste mnd)</span>
-      <div class="head-spacer"></div>
-      <span style="color:var(--mut);" id="pred-mad"></span>
-    </div>
-    <svg id="pred-chart" viewBox="0 0 800 260" role="img" aria-label="Prediksjonsgraf"></svg>
-    <p style="margin:12px 0 0;font-size:12px;color:var(--mut);" id="pred-note"></p>
-  </div>
-</section>
-
 <section id="selskap">
   <div class="eyebrow">Om selskapet</div>
   <h2 class="title">Et nordisk spare- og forsikringskonsern</h2>
@@ -95,7 +78,7 @@
       <div id="company-subs"></div>
     </div>
     <div class="card">
-      <div class="card-title">Driftsresultat per segment</div>
+      <div class="card-title">Kontantresultat per segment</div>
       <div class="card-sub" id="segment-sub"></div>
       <div class="bars" id="segment-bars"></div>
       <div class="mono" style="margin-top:12px;font-size:12px;color:var(--mut);" id="segment-sum"></div>
@@ -227,7 +210,7 @@
 <section id="kilder">
   <div class="eyebrow">Kilder og forbehold</div>
   <div class="card">
-    <p class="disclaimer"><strong>Dette er ikke investeringsrådgivning.</strong> Tallene er hentet fra offentlig tilgjengelige kilder, sist oppdatert <span id="footer-updated"></span>, og kan avvike fra sanntidskurser og senere oppdaterte tall. Sjekk alltid Oslo Børs, Storebrands børsmeldinger eller din megler før du tar investeringsbeslutninger. Prediksjonen er en enkel statistisk illustrasjon, ikke en prognose.</p>
+    <p class="disclaimer"><strong>Dette er ikke investeringsrådgivning.</strong> Tallene er hentet fra offentlig tilgjengelige kilder, sist oppdatert <span id="footer-updated"></span>, og kan avvike fra sanntidskurser og senere oppdaterte tall. Sjekk alltid Oslo Børs, Storebrands børsmeldinger eller din megler før du tar investeringsbeslutninger.</p>
     <div class="pills" id="sources-list"></div>
   </div>
 </section>

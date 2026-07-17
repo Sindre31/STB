@@ -43,7 +43,8 @@ function h(html) { const t = document.createElement("template"); t.innerHTML = h
 /* ---------- Tema ---------- */
 (function initTheme() {
   const saved = localStorage.getItem("stb-theme");
-  if (saved === "light") document.body.classList.add("light");
+  // Lys modus er standard; mørk kun hvis brukeren aktivt har valgt det.
+  if (saved !== "dark") document.body.classList.add("light");
   const btn = document.getElementById("theme-btn");
   const setLabel = () => { btn.textContent = document.body.classList.contains("light") ? "Mørkt tema" : "Lyst tema"; };
   setLabel();
@@ -83,7 +84,7 @@ const hideTip = () => tooltip.classList.remove("show");
 
 /* ---------- Nav + header ---------- */
 const NAV = [
-  ["oversikt", "Oversikt"], ["kurs", "Kurs"], ["prediksjon", "Prediksjon"], ["selskap", "Selskap"],
+  ["oversikt", "Oversikt"], ["kurs", "Kurs"], ["selskap", "Selskap"],
   ["utbytte", "Utbytte"], ["nokkeltall", "Nøkkeltall"], ["rapporter", "Rapporter"],
   ["innsidehandel", "Innsidehandel"], ["sammenligning", "Sammenligning"], ["nyheter", "Nyheter"], ["kilder", "Kilder"],
 ];
@@ -246,72 +247,6 @@ function renderRangeMeter() {
   document.getElementById("range-high").textContent = nf0.format(q.week52High);
 }
 
-/* ---------- Prediksjonsgraf (enkel trendmodell fra ekte månedsdata) ---------- */
-const MND = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"];
-function renderPrediction() {
-  const svg = document.getElementById("pred-chart");
-  const monthly = STB_PRICES.max.slice(-12); // [ "YYYY-MM", pris ]
-  const n = monthly.length;
-  const prices = monthly.map((d) => d[1]);
-  // lineær regresjon
-  const xs = prices.map((_, i) => i);
-  const mx = xs.reduce((a, b) => a + b, 0) / n, my = prices.reduce((a, b) => a + b, 0) / n;
-  let num = 0, den = 0;
-  xs.forEach((x, i) => { num += (x - mx) * (prices[i] - my); den += (x - mx) ** 2; });
-  const slope = num / den, intercept = my - slope * mx;
-  const model = xs.map((x) => slope * x + intercept);
-  // avvik
-  const resid = prices.map((p, i) => p - model[i]);
-  const madPct = (resid.reduce((a, r, i) => a + Math.abs(r) / prices[i], 0) / n) * 100;
-  const sigma = Math.sqrt(resid.reduce((a, r) => a + r * r, 0) / n);
-  // anslag neste måned – trend justert mot analytikernes kursmål
-  const trendFwd = slope * n + intercept;
-  const fwd = 0.7 * trendFwd + 0.3 * STB_DATA.quote.analystTarget;
-  const lo = fwd - 1.5 * sigma, hi = fwd + 1.5 * sigma;
-
-  const all = [...prices, fwd, lo, hi];
-  let yMin = Math.min(...all), yMax = Math.max(...all);
-  const padY = (yMax - yMin) * 0.1 || 1; yMin -= padY; yMax += padY;
-  const PADL = 48, XR = 784, TOP = 14, BOT = 234;
-  const X = (i) => PADL + (i / n) * (XR - PADL); // 0..n (n = fwd)
-  const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
-
-  for (let s = 0; s <= 4; s++) {
-    const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v);
-    svg.appendChild(el("line", { x1: PADL, x2: XR, y1: yy, y2: yy, class: "chart-grid" }));
-    svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, nf0.format(v)));
-  }
-  monthly.forEach((d, i) => {
-    if (i % 2 === 0 || i === n - 1) {
-      const [yy, mm] = d[0].split("-");
-      svg.appendChild(el("text", { x: X(i), y: 254, "text-anchor": "middle", class: "chart-axis" }, MND[+mm - 1]));
-    }
-  });
-  // "i dag"
-  svg.appendChild(el("line", { x1: X(n - 1), x2: X(n - 1), y1: TOP, y2: BOT, stroke: "var(--mut)", "stroke-width": "1", "stroke-dasharray": "2,4" }));
-  svg.appendChild(el("text", { x: X(n - 1), y: 26, "text-anchor": "middle", class: "chart-axis" }, "i dag"));
-  // usikkerhetsbånd (fra siste faktiske til anslag)
-  svg.appendChild(el("path", { d: `M ${X(n - 1)} ${Y(prices[n - 1])} L ${X(n)} ${Y(hi)} L ${X(n)} ${Y(lo)} Z`, fill: "var(--peer)", "fill-opacity": "0.14", stroke: "none" }));
-  // modell (stiplet)
-  let md = ""; model.forEach((v, i) => { md += (i ? " L " : "M ") + X(i) + " " + Y(v); });
-  md += ` L ${X(n)} ${Y(fwd)}`;
-  svg.appendChild(el("path", { d: md, fill: "none", stroke: "var(--peer)", "stroke-width": "2", "stroke-dasharray": "6,4" }));
-  // faktisk
-  let ad = ""; prices.forEach((v, i) => { ad += (i ? " L " : "M ") + X(i) + " " + Y(v); });
-  svg.appendChild(el("path", { d: ad, fill: "none", stroke: "var(--acc)", "stroke-width": "2.2" }));
-  svg.appendChild(el("circle", { cx: X(n - 1), cy: Y(prices[n - 1]), r: 4.5, fill: "var(--acc)" }));
-  svg.appendChild(el("circle", { cx: X(n), cy: Y(fwd), r: 4.5, fill: "var(--peer)" }));
-  svg.appendChild(el("text", { x: X(n) - 6, y: Y(fwd) - 8, "text-anchor": "end", class: "chart-axis", fill: "var(--peer)", "font-weight": "600" }, kr(fwd, 0)));
-
-  // neste måned-label
-  const lastMonth = monthly[n - 1][0].split("-").map(Number);
-  let nm = lastMonth[1], ny = lastMonth[0];
-  nm++; if (nm > 12) { nm = 1; ny++; }
-  document.getElementById("pred-mad").textContent = `Gj.sn. avvik siste 12 mnd: ±${nf1.format(madPct)} %`;
-  document.getElementById("pred-note").innerHTML =
-    `Modellanslag ${MND[nm - 1]} ${ny}: <span class="mono" style="color:var(--tx)">${kr(fwd, 0)}</span> (intervall ${nf0.format(lo)}–${nf0.format(hi)} kr). Dette er en enkel statistisk modell for illustrasjon — ikke en prognose du bør handle på.`;
-}
-
 /* ---------- Selskap + segmenter ---------- */
 function renderCompany() {
   document.getElementById("company-desc").textContent = STB_DATA.company.description;
@@ -320,13 +255,13 @@ function renderCompany() {
     subs.appendChild(h(`<div class="tickline"><span class="mk">▸</span><div><span style="font-weight:600">${c.name}</span><span class="desc"> — ${c.desc}</span></div></div>`));
   });
   const segs = STB_DATA.segments, maxV = Math.max(...segs.map((s) => s.value));
-  document.getElementById("segment-sub").textContent = "Q2 2026, millioner kroner — hvor pengene tjenes";
+  document.getElementById("segment-sub").textContent = "Q2 2026, kontantresultat i millioner kroner — hvor pengene tjenes";
   const bars = document.getElementById("segment-bars");
   segs.forEach((s) => {
     bars.appendChild(h(`<div class="seg-row"><div class="seg-head"><span>${s.name}${s.growth ? ' <span style="color:var(--mut)">' + s.growth + "</span>" : ""}</span><span class="mono">${nf0.format(s.value)}</span></div><div class="seg-track"><div class="seg-fill" style="width:${(s.value / maxV) * 100}%"></div></div></div>`));
   });
   const sum = segs.reduce((a, s) => a + s.value, 0);
-  document.getElementById("segment-sum").textContent = `Sum driftsresultat Q2 2026: ${nf0.format(sum)} mill. (+17 % å/å)`;
+  document.getElementById("segment-sum").textContent = `Sum kontantresultat Q2 2026: ${nf0.format(sum)} mill. (+26 % å/å)`;
 }
 
 /* ---------- Utbytte ---------- */
@@ -448,7 +383,6 @@ renderHeader();
 renderStats();
 renderPriceChart();
 renderRangeMeter();
-renderPrediction();
 renderCompany();
 renderDividends();
 renderKeyFigures();
