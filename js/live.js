@@ -5,16 +5,16 @@ const STB_LIVE = {
   "updated": "17. juli 2026",
   "dataDate": "2026-07-17",
   "quote": {
-    "price": 196.6,
-    "change": -0.1,
-    "changePct": -0.05,
+    "price": 196.8,
+    "change": 0.1,
+    "changePct": 0.05,
     "week52Low": 145.1,
     "week52High": 199.5,
-    "volume": 83932,
-    "peTtm": 17.23,
-    "peForward": 14.72,
+    "volume": 92608,
+    "peTtm": 17.25,
+    "peForward": 14.74,
     "dividendYield": 2.72,
-    "marketCap": 82.31,
+    "marketCap": 82.39,
     "epsTtm": 11.41,
     "bookValue": 78.89,
     "priceToBook": 2.49,
@@ -24,51 +24,51 @@ const STB_LIVE = {
     "analystRating": "Kjøp",
     "analystCount": 10,
     "perf": {
-      "oneY": 33,
-      "fiveY": 160.1,
-      "sinceGraph": 363.4
+      "oneY": 33.2,
+      "fiveY": 160.4,
+      "sinceGraph": 363.8
     }
   },
   "peers": {
     "STB.OL": {
-      "pe": 17.23,
+      "pe": 17.25,
       "dividendYield": 2.72,
-      "marketCap": 82.31,
+      "marketCap": 82.39,
       "priceToBook": 2.49,
-      "price": 196.6,
-      "oneYearPct": 33.2
+      "price": 196.8,
+      "oneYearPct": 33.3
     },
     "GJF.OL": {
-      "pe": 21.66,
+      "pe": 21.69,
       "dividendYield": 3.61,
-      "marketCap": 138.39,
-      "priceToBook": 7.22,
-      "price": 276.8,
-      "oneYearPct": -1.6
+      "marketCap": 138.59,
+      "priceToBook": 7.23,
+      "price": 277.2,
+      "oneYearPct": -1.4
     },
     "PROT.OL": {
-      "pe": 19.64,
+      "pe": 19.7,
       "dividendYield": 4.12,
-      "marketCap": 40.05,
-      "priceToBook": 5.98,
-      "price": 486.6,
-      "oneYearPct": -6.2
+      "marketCap": 40.19,
+      "priceToBook": 6,
+      "price": 488.2,
+      "oneYearPct": -5.9
     },
     "TRYG.CO": {
-      "pe": 20.94,
+      "pe": 20.95,
       "dividendYield": 5.48,
-      "marketCap": 92.84,
-      "priceToBook": 2.59,
-      "price": 155.8,
+      "marketCap": 92.9,
+      "priceToBook": 2.6,
+      "price": 155.9,
       "oneYearPct": -2.3
     },
     "SAMPO.HE": {
-      "pe": 15.81,
+      "pe": 15.82,
       "dividendYield": 3.78,
-      "marketCap": 25.46,
+      "marketCap": 25.48,
       "priceToBook": 3.12,
-      "price": 9.64,
-      "oneYearPct": 1.9
+      "price": 9.65,
+      "oneYearPct": 2
     }
   }
 };
