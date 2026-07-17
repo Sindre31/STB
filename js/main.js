@@ -88,26 +88,51 @@ function wireInfoIcons() {
   document.querySelectorAll(".info-i[data-term]").forEach((ic) => {
     const g = GLOSSARY[ic.getAttribute("data-term")];
     if (!g) return;
-    const show = (e) => { e.stopPropagation(); tooltip.classList.add("wide"); tooltip.innerHTML = `<strong>${g[0]}</strong><br>${g[1]}`; tooltip.style.left = (e.touches ? e.touches[0].clientX : e.clientX) + "px"; tooltip.style.top = (e.touches ? e.touches[0].clientY : e.clientY) + "px"; tooltip.classList.add("show"); };
+    const show = (e) => {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const r = ic.getBoundingClientRect();
+      const x = e && e.touches ? e.touches[0].clientX : (e && typeof e.clientX === "number" ? e.clientX : r.left + r.width / 2);
+      const y = e && e.touches ? e.touches[0].clientY : (e && typeof e.clientY === "number" ? e.clientY : r.top);
+      tooltip.classList.add("wide"); tooltip.innerHTML = `<strong>${g[0]}</strong><br>${g[1]}`;
+      tooltip.style.left = x + "px"; tooltip.style.top = y + "px"; tooltip.classList.add("show");
+    };
     ic.addEventListener("mouseenter", show);
     ic.addEventListener("mouseleave", hideTip);
     ic.addEventListener("click", show);
+    ic.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(e); } else if (e.key === "Escape") hideTip(); });
+    ic.addEventListener("blur", hideTip);
   });
 }
 
 /* ---------- Modal / popup ---------- */
 const modalEl = document.getElementById("modal");
+let modalReturnFocus = null;
 function openModal(title, content) {
+  modalReturnFocus = document.activeElement;
   document.getElementById("modal-title").textContent = title;
   const c = document.getElementById("modal-content");
   c.innerHTML = "";
   if (typeof content === "string") c.innerHTML = content; else c.appendChild(content);
   modalEl.hidden = false;
+  document.getElementById("modal-close").focus();
 }
-const closeModal = () => { modalEl.hidden = true; };
+const closeModal = () => {
+  modalEl.hidden = true;
+  if (modalReturnFocus && typeof modalReturnFocus.focus === "function") modalReturnFocus.focus();
+};
 document.getElementById("modal-close").addEventListener("click", closeModal);
 modalEl.addEventListener("click", (e) => { if (e.target === modalEl) closeModal(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modalEl.hidden) closeModal(); });
+document.addEventListener("keydown", (e) => {
+  if (modalEl.hidden) return;
+  if (e.key === "Escape") { closeModal(); return; }
+  if (e.key === "Tab") { // fokusfelle: hold Tab innenfor modalen
+    const f = [...modalEl.querySelectorAll('a[href],button,[tabindex]:not([tabindex="-1"])')].filter((x) => x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
 
 /* ---------- Stale-varsel ---------- */
 (function staleCheck() {
@@ -160,7 +185,12 @@ function renderStats() {
   tiles.forEach((t) => {
     const hint = t.pop ? `<div class="click-hint">Klikk for utvikling ▸</div>` : "";
     const node = h(`<div class="stat${t.pop ? " clickable" : ""}"><div class="label">${t.label}${t.info ? infoIcon(t.info) : ""}</div><div class="val">${t.val}</div><div class="sub">${t.sub}</div>${hint}</div>`);
-    if (t.pop) node.addEventListener("click", t.pop);
+    if (t.pop) {
+      node.addEventListener("click", t.pop);
+      node.setAttribute("role", "button"); node.setAttribute("tabindex", "0");
+      node.setAttribute("aria-label", `${t.label} – vis utvikling`);
+      node.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); t.pop(); } });
+    }
     g.appendChild(node);
   });
 }
@@ -775,6 +805,7 @@ function renderComparison() {
     peBars.appendChild(h(`<div class="bar-row"><span style="font-weight:${fw}">${shortName(p.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${(p.pe / maxPe) * 100}%;background:${col}"></div></div><span class="bar-val">${nf1.format(p.pe)}</span></div>`));
     yBars.appendChild(h(`<div class="bar-row"><span style="font-weight:${fw}">${shortName(p.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${(p.dividendYield / maxY) * 100}%;background:${p.isSubject ? "var(--acc)" : "var(--peer)"}"></div></div><span class="bar-val">${nf1.format(p.dividendYield)} %</span></div>`));
   });
+  const fx = STB_DATA.quote.fx || {};
   const tb = document.getElementById("cmp-table-body");
   peers.forEach((p) => {
     // 1-års avkastning fra samme daglige serie som resten av siden (samkjørt).
@@ -783,7 +814,10 @@ function renderComparison() {
     const val = ret == null ? p.oneYearPct : ret;
     const yr = val == null ? "–" : pct1(val);
     const yrCol = val == null ? "var(--mut)" : val >= 0 ? "var(--up)" : "var(--down)";
-    tb.appendChild(h(`<tr class="${p.isSubject ? "subject" : ""}"><td style="font-weight:${p.isSubject ? 700 : 400}">${p.name}</td><td class="num">${nf1.format(p.price)} ${p.currency}</td><td class="num" style="color:var(--mut)">${nf0.format(p.marketCap)} mrd</td><td class="num">${nf1.format(p.pe)}</td><td class="num">${nf1.format(p.dividendYield)} %</td><td class="num" style="color:${yrCol}">${yr}</td></tr>`));
+    // Markedsverdi normalisert til NOK for rettferdig størrelses-sammenligning.
+    const mcapNok = p.marketCap * (fx[p.currency] || 1);
+    const mcapCell = p.currency === "NOK" ? `${nf0.format(mcapNok)} mrd` : `${nf0.format(mcapNok)} mrd <span style="color:var(--mut);font-size:11px">(${nf0.format(p.marketCap)} ${p.currency})</span>`;
+    tb.appendChild(h(`<tr class="${p.isSubject ? "subject" : ""}"><td style="font-weight:${p.isSubject ? 700 : 400}">${p.name}</td><td class="num">${nf1.format(p.price)} ${p.currency}</td><td class="num" style="color:var(--mut)">${mcapCell}</td><td class="num">${nf1.format(p.pe)}</td><td class="num">${nf1.format(p.dividendYield)} %</td><td class="num" style="color:${yrCol}">${yr}</td></tr>`));
   });
 }
 const shortName = (n) => n.split(" ")[0];
@@ -1115,7 +1149,12 @@ function renderAnalysts() {
 }
 
 function wirePopups() {
-  const wire = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener("click", (ev) => { if (!ev.target.classList.contains("info-i")) fn(); }); };
+  const wire = (id, fn) => {
+    const e = document.getElementById(id); if (!e) return;
+    e.setAttribute("role", "button"); e.setAttribute("tabindex", "0");
+    e.addEventListener("click", (ev) => { if (!ev.target.classList.contains("info-i")) fn(); });
+    e.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); fn(); } });
+  };
   wire("segment-title", showSegmentDev);
   wire("company-subs-title", showCompanies);
   wire("cmp-pe-title", showPeHistory);

@@ -87,6 +87,20 @@ async function fetchFundamentals(ticker, auth) {
 }
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null && !Number.isNaN(v)));
 
+// Valutakurser til NOK, så peers i DKK/EUR kan sammenlignes rettferdig i markedsverdi.
+async function fetchFx() {
+  const out = { NOK: 1 };
+  for (const [cur, ticker] of [["DKK", "DKKNOK=X"], ["EUR", "EURNOK=X"]]) {
+    try {
+      const r = await fetchChart(ticker, "5d", "1d");
+      const s = seriesFrom(r, "day");
+      const v = r.meta?.regularMarketPrice ?? (s.length ? s.at(-1)[1] : null);
+      if (v) out[cur] = round(v, 3);
+    } catch { /* behold uten */ }
+  }
+  return out;
+}
+
 // Norges Banks styringsrente (offisiell norsk rente) – rentemiljøet Storebrand er følsomt for.
 // Vi henter nivået og endringen siste halvår (retningen i rentesyklusen).
 async function fetchRate() {
@@ -249,6 +263,7 @@ async function main() {
   let auth = null;
   try { auth = await getCrumb(); } catch (e) { console.warn("Crumb feilet, hopper over nøkkeltall:", e.message); }
   const rate = await fetchRate();
+  const fx = await fetchFx();
 
   let stbFund = {};
   const peerFund = {};
@@ -267,6 +282,7 @@ async function main() {
     volume: meta.regularMarketVolume,
     ...stbFund,
     ...rate,
+    fx,
     perf: { oneY: pctChange(oneY), fiveY: pctChange(fiveY), sinceGraph: pctChange(max) },
   });
 

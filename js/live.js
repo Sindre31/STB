@@ -26,6 +26,11 @@ const STB_LIVE = {
     "analystCount": 10,
     "policyRate": 4.25,
     "policyRateChg": 0.25,
+    "fx": {
+      "NOK": 1,
+      "DKK": 1.475,
+      "EUR": 11.035
+    },
     "perf": {
       "oneY": 32.5,
       "fiveY": 159.2,
