@@ -638,6 +638,32 @@ function renderReports() {
   r.links.forEach((l) => { const a = document.createElement("a"); a.href = l.url; a.target = "_blank"; a.rel = "noopener"; a.className = "src-pill"; a.textContent = l.label + " ↗"; links.appendChild(a); });
 }
 
+/* ---------- Live børsmeldinger fra Oslo Børs NewsWeb ---------- */
+const NW_CAT = {
+  "MELDEPLIKTIG HANDEL FOR PRIMÆRINNSIDERE": "Innsidehandel",
+  "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER": "Tilbakekjøp",
+  "HALVÅRSRAPPORT": "Rapport",
+  "KVARTALSRAPPORT": "Rapport",
+  "ÅRSRAPPORT": "Årsrapport",
+  "KAPITAL- OG STEMMERETTSENDRINGER": "Kapital",
+  "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON": "Regulatorisk",
+  "IKKE-INFORMASJONSPLIKTIGE PRESSEMELDINGER": "Presse",
+  "INNKALLING TIL GENERALFORSAMLING": "Generalforsamling",
+  "FLAGGEMELDINGER": "Flagging",
+};
+const nwCat = (c) => NW_CAT[c] || (c ? c.charAt(0) + c.slice(1).toLowerCase().split(" ")[0] : "");
+function renderNewsFeed() {
+  const card = document.getElementById("newsfeed-card");
+  if (!card || typeof STB_NEWSFEED === "undefined" || !STB_NEWSFEED.messages || !STB_NEWSFEED.messages.length) return;
+  card.hidden = false;
+  document.getElementById("newsfeed-sub").textContent = `Offisielle meldinger publisert på Oslo Børs NewsWeb · sist hentet ${STB_NEWSFEED.updated}`;
+  const list = document.getElementById("newsfeed-list");
+  const fmtDate = (d) => { const p = d.split("-"); return `${p[2]}.${p[1]}.${p[0]}`; };
+  STB_NEWSFEED.messages.forEach((n) => {
+    list.appendChild(h(`<a class="nw-row" href="${n.url}" target="_blank" rel="noopener"><span class="nw-date">${fmtDate(n.date)}</span><span class="nw-title">${n.title}</span>${n.category ? `<span class="nw-cat">${nwCat(n.category)}</span>` : ""}</a>`));
+  });
+}
+
 /* ---------- Innsidehandel / tilbakekjøp / eierstruktur ---------- */
 function renderInsiders() {
   const d = STB_DATA.insiders;
@@ -881,6 +907,7 @@ renderCompany();
 renderDividends();
 renderKeyFigures();
 renderReports();
+renderNewsFeed();
 renderInsiders();
 renderComparison();
 renderNews();

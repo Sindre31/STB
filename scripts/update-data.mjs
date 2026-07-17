@@ -86,6 +86,49 @@ async function fetchFundamentals(ticker, auth) {
 }
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null && !Number.isNaN(v)));
 
+// ---- Børsmeldinger fra Oslo Børs NewsWeb (best effort) ----
+// issuer-filteret i API-et virker ikke, så vi henter et datospenn og filtrerer på issuerId 1955.
+// NewsWeb publiserer norsk + engelsk som par; vi foretrekker den norske tittelen.
+const NW_ISSUER = 1955;
+const isEnglishTitle = (t) => /\b(the|of|results|notice|transaction|invitation|reminder|buyback|announcement|quarter|proposal|completion|acquisition|minutes|resolutions|prospectus|voting|mandatory|managers|primary insider|financial calendar|contemplated)\b/i.test(t);
+const isNorwegianTitle = (t) => /[æøå]/i.test(t) || /\b(og|av|resultater|meldepliktig|primærinnsider|tilbakekjøp|påminnelse|innkalling|generalforsamling|flagging|forslag|kvartal|utbytte|igangsettelse|invitasjon|gjennomført|oppkjøp|børs|finanskalender|stemmerett|handel)\b/i.test(t);
+
+async function fetchNewsFeed() {
+  const day = 86400000, iso = (t) => new Date(t).toISOString().slice(0, 10);
+  // API-et kapper store spenn (returnerer bare de nyeste ~600 på tvers av alle utstedere),
+  // så vi henter i mindre biter bakover i tid og slår sammen for å få nok STB-meldinger.
+  const byId = new Map();
+  for (let c = 0; c < 8; c++) {
+    const to = Date.now() + day - c * 22 * day, from = to - 23 * day;
+    const url = `https://api3.oslo.oslobors.no/v1/newsreader/list?fromDate=${iso(from)}&toDate=${iso(to)}`;
+    const res = await fetch(url, { headers: { "User-Agent": UA } });
+    if (!res.ok) { if (c === 0) throw new Error(`NewsWeb HTTP ${res.status}`); continue; }
+    for (const m of (await res.json())?.data?.messages || []) {
+      if (m.issuerId === NW_ISSUER && !m.test) byId.set(m.messageId, m);
+    }
+  }
+  const stb = [...byId.values()].sort((a, b) => (a.publishedTime < b.publishedTime ? 1 : -1));
+  const clean = (m) => m.title.replace(/^STOREBRAND ASA:\s*/i, "").trim();
+  // Norsk-score: æøå = 2, norsk ord = 1, engelsk ord = -1. NewsWeb publiserer norsk+engelsk som par
+  // under 1 sek fra hverandre; vi grupperer meldinger innen 2 sek og beholder den mest norske.
+  const score = (t) => (/[æøå]/i.test(t) ? 2 : 0) + (isNorwegianTitle(t) ? 1 : 0) - (isEnglishTitle(t) ? 1 : 0);
+  const used = new Set(), kept = [];
+  for (const m of stb) {
+    if (used.has(m.messageId)) continue;
+    const group = stb.filter((o) => !used.has(o.messageId) && Math.abs(Date.parse(o.publishedTime) - Date.parse(m.publishedTime)) < 2000);
+    const best = group.reduce((a, b) => (score(clean(b)) > score(clean(a)) ? b : a));
+    group.forEach((o) => used.add(o.messageId));
+    kept.push({
+      title: clean(best),
+      date: best.publishedTime.slice(0, 10),
+      category: best.category?.[0]?.category_no || "",
+      url: `https://newsweb.oslobors.no/message/${best.messageId}`,
+    });
+    if (kept.length >= 8) break;
+  }
+  return kept;
+}
+
 async function seriesForTicker(ticker) {
   const [a, b, c] = await Promise.all([
     fetchChart(ticker, "1y", "1d"),
@@ -163,6 +206,10 @@ async function main() {
     if (s && s.oneY.length) peerSeries[p.ticker] = s;
   }
 
+  // ---- Børsmeldinger (best effort – egen fil, feiler stille) ----
+  let newsFeed = [];
+  try { newsFeed = await fetchNewsFeed(); } catch (e) { console.warn("NewsWeb feilet, hopper over børsmeldinger:", e.message); }
+
   const updated = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
 
   const pricesJs =
@@ -181,6 +228,15 @@ async function main() {
 
   writeFileSync(join(ROOT, "js", "prices.js"), pricesJs);
   writeFileSync(join(ROOT, "js", "live.js"), liveJs);
+
+  // Skriv børsmeldinger kun hvis vi faktisk fikk noe (unngå å overskrive god data med tom liste).
+  if (newsFeed.length) {
+    const newsJs =
+      "// Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).\n" +
+      "// AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.\n" +
+      "const STB_NEWSFEED = " + JSON.stringify({ updated, messages: newsFeed }, null, 2) + ";\n";
+    writeFileSync(join(ROOT, "js", "newsfeed.js"), newsJs);
+  }
 
   console.log(
     `OK – ${updated}: STB ${price} (${changePct > 0 ? "+" : ""}${changePct} %), ` +

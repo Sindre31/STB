@@ -422,4 +422,12 @@ a.src-pill:hover { color: var(--tx); border-color: var(--acc); text-decoration: 
 .method-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.5; }
 .method-list li { padding-left: 2px; }
 .method-sig { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+/* Live børsmeldinger (NewsWeb) */
+.nw-row { display: flex; align-items: baseline; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--bd); text-decoration: none; color: var(--tx); }
+.nw-row:last-child { border-bottom: none; }
+.nw-row:hover { color: var(--acc); text-decoration: none; }
+.nw-date { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--mut); white-space: nowrap; min-width: 74px; }
+.nw-title { flex: 1; font-size: 13.5px; }
+.nw-cat { font-size: 10.5px; color: var(--acc); border: 1px solid var(--bd); border-radius: 20px; padding: 2px 9px; white-space: nowrap; }
+@media (max-width: 560px) { .nw-cat { display: none; } }
 @media (max-width: 620px) { .ai-track { grid-template-columns: 1fr 1fr; } }

@@ -45,11 +45,12 @@ jobs:
         run: |
           git config user.name "stock-data-bot"
           git config user.email "actions@github.com"
-          if git diff --quiet -- js/prices.js js/live.js js/ai-view.js && [ "${{ inputs.force_commit }}" != "true" ]; then
+          if git diff --quiet -- js/prices.js js/live.js js/ai-view.js js/newsfeed.js && [ "${{ inputs.force_commit }}" != "true" ]; then
             echo "Ingen endringer i kursdata – hopper over commit."
           else
             git add js/prices.js js/live.js
             [ -f js/ai-view.js ] && git add js/ai-view.js || true
+            [ -f js/newsfeed.js ] && git add js/newsfeed.js || true
             git commit --allow-empty -m "Auto-oppdater aksjedata ($(date -u '+%Y-%m-%d %H:%M UTC'))"
             git push
             echo "Kursdata oppdatert og pushet til main."

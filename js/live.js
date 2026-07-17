@@ -5,16 +5,16 @@ const STB_LIVE = {
   "updated": "17. juli 2026",
   "dataDate": "2026-07-17",
   "quote": {
-    "price": 197.2,
-    "change": 0.5,
-    "changePct": 0.25,
+    "price": 197.3,
+    "change": 0.6,
+    "changePct": 0.31,
     "week52Low": 145.1,
     "week52High": 199.5,
-    "volume": 94999,
-    "peTtm": 17.25,
-    "peForward": 14.7,
+    "volume": 101291,
+    "peTtm": 17.26,
+    "peForward": 14.71,
     "dividendYield": 2.72,
-    "marketCap": 82.56,
+    "marketCap": 82.6,
     "epsTtm": 11.43,
     "bookValue": 78.89,
     "priceToBook": 2.5,
@@ -24,19 +24,19 @@ const STB_LIVE = {
     "analystRating": "Kjøp",
     "analystCount": 10,
     "perf": {
-      "oneY": 33.4,
-      "fiveY": 160.9,
-      "sinceGraph": 364.8
+      "oneY": 33.5,
+      "fiveY": 161,
+      "sinceGraph": 365
     }
   },
   "peers": {
     "STB.OL": {
-      "pe": 17.25,
+      "pe": 17.26,
       "dividendYield": 2.72,
-      "marketCap": 82.56,
+      "marketCap": 82.6,
       "priceToBook": 2.5,
-      "price": 197.2,
-      "oneYearPct": 33.6
+      "price": 197.3,
+      "oneYearPct": 33.7
     },
     "GJF.OL": {
       "pe": 21.72,
@@ -47,28 +47,28 @@ const STB_LIVE = {
       "oneYearPct": -1.3
     },
     "PROT.OL": {
-      "pe": 19.7,
+      "pe": 19.73,
       "dividendYield": 4.12,
-      "marketCap": 40.19,
-      "priceToBook": 6,
-      "price": 488.2,
-      "oneYearPct": -5.9
+      "marketCap": 40.25,
+      "priceToBook": 6.01,
+      "price": 489,
+      "oneYearPct": -5.8
     },
     "TRYG.CO": {
-      "pe": 20.97,
+      "pe": 20.93,
       "dividendYield": 5.48,
-      "marketCap": 92.96,
-      "priceToBook": 2.6,
-      "price": 156,
-      "oneYearPct": -2.2
+      "marketCap": 92.78,
+      "priceToBook": 2.59,
+      "price": 155.7,
+      "oneYearPct": -2.4
     },
     "SAMPO.HE": {
-      "pe": 15.83,
+      "pe": 15.81,
       "dividendYield": 3.78,
-      "marketCap": 25.49,
+      "marketCap": 25.45,
       "priceToBook": 3.12,
-      "price": 9.66,
-      "oneYearPct": 2.1
+      "price": 9.64,
+      "oneYearPct": 1.9
     }
   }
 };
