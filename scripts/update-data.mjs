@@ -74,8 +74,12 @@ async function fetchFundamentals(ticker, auth) {
     dividendYield: round(raw(sd, "dividendYield") * 100),
     marketCap: round(raw(sd, "marketCap") / 1e9),
     epsTtm: round(raw(ks, "trailingEps")),
+    bookValue: round(raw(ks, "bookValue")),
+    priceToBook: round(raw(ks, "priceToBook")),
     beta: round(raw(sd, "beta")),
     analystTarget: round(raw(fd, "targetMeanPrice")),
+    analystHigh: round(raw(fd, "targetHighPrice")),
+    analystLow: round(raw(fd, "targetLowPrice")),
     analystRating: REC_NO[fd.recommendationKey] || undefined,
     analystCount: raw(fd, "numberOfAnalystOpinions"),
   };
@@ -122,7 +126,7 @@ async function main() {
     stbFund = clean(await fetchFundamentals("STB.OL", auth).catch(() => ({})));
     for (const p of PEERS) {
       const f = await fetchFundamentals(p.ticker, auth).catch(() => ({}));
-      peerFund[p.ticker] = clean({ pe: f.peTtm, dividendYield: f.dividendYield, marketCap: f.marketCap });
+      peerFund[p.ticker] = clean({ pe: f.peTtm, dividendYield: f.dividendYield, marketCap: f.marketCap, priceToBook: f.priceToBook });
     }
   }
 

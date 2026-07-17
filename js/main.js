@@ -36,6 +36,7 @@ function h(html) { const t = document.createElement("template"); t.innerHTML = h
       if (lv.pe != null) p.pe = lv.pe;
       if (lv.dividendYield != null) p.dividendYield = lv.dividendYield;
       if (lv.marketCap != null) p.marketCap = lv.marketCap;
+      if (lv.priceToBook != null) p.priceToBook = lv.priceToBook;
     });
   }
 })();
@@ -243,7 +244,7 @@ function renderPriceChart() {
   draw();
 }
 
-/* ---------- AI-ekspert: egen meningslinje + fremtidsprojeksjon ---------- */
+/* ---------- AI-ekspert: verdilinje, fremtidsprojeksjon, backtest ---------- */
 const AI_LOOKBACKS = [["1m", "1 mnd"], ["3m", "3 mnd"], ["1y", "1 år"], ["3y", "3 år"]];
 const AI_FORWARDS = [[0, "0"], [1, "1 mnd"], [3, "3 mnd"], [6, "6 mnd"], [12, "12 mnd"]];
 function aiLookback(lb) {
@@ -252,10 +253,64 @@ function aiLookback(lb) {
   if (lb === "3y") return STB_PRICES.fiveY.slice(-157);
   return STB_PRICES.oneY;
 }
+// Daglig realisert volatilitet (logg-avkastning) fra siste års kursserie.
+function dailyVol(prices) {
+  const r = [];
+  for (let i = 1; i < prices.length; i++) if (prices[i] > 0 && prices[i - 1] > 0) r.push(Math.log(prices[i] / prices[i - 1]));
+  if (r.length < 3) return 0.012;
+  const m = r.reduce((a, v) => a + v, 0) / r.length;
+  return Math.sqrt(r.reduce((a, x) => a + (x - m) ** 2, 0) / (r.length - 1));
+}
+// Backtest av modellens retningssignal (kausalt: kun forutgående kurser brukes).
+// Hver dag: ligger kursen under sitt eget glidende snitt (undervurdert) → forvent oppgang, ellers nedgang.
+// Treff = faktisk retning H handelsdager frem stemte med signalet.
+function backtestSignal(series, win, horizon) {
+  const p = series.map((d) => d[1]);
+  let hits = 0, total = 0, followRet = 0;
+  for (let i = win; i + horizon < p.length; i++) {
+    const sma = p.slice(i - win, i).reduce((a, v) => a + v, 0) / win;
+    if (Math.abs(p[i] / sma - 1) < 0.005) continue; // for nær snittet – ingen klar mening
+    const bull = p[i] < sma;
+    const fut = (p[i + horizon] / p[i]) - 1;
+    total++;
+    if ((bull && fut > 0) || (!bull && fut < 0)) hits++;
+    followRet += bull ? fut : -fut;
+  }
+  return { hits, total, rate: total ? (hits / total) * 100 : null, avgFollow: total ? (followRet / total) * 100 : null };
+}
 function renderAiExpert() {
   const svg = document.getElementById("ai-chart");
   const q = STB_DATA.quote, k = STB_DATA.kpis;
   let lb = "1y", fwd = 3;
+
+  // Fundamental verdiforankring: snitt av flere uavhengige, ekte ankere.
+  const peerAvgPe = avg(STB_DATA.peers.filter((p) => !p.isSubject && p.pe).map((p) => p.pe));
+  const peerAvgY = avg(STB_DATA.peers.filter((p) => !p.isSubject && p.dividendYield).map((p) => p.dividendYield));
+  const peerPBs = STB_DATA.peers.filter((p) => !p.isSubject && p.priceToBook).map((p) => p.priceToBook);
+  const peerAvgPB = peerPBs.length ? avg(peerPBs) : null;
+  const anchors = [];
+  if (q.analystTarget) anchors.push({ label: "analytikermål", value: q.analystTarget });
+  if (q.epsTtm && peerAvgPe) anchors.push({ label: `bransje-P/E ${nf1.format(peerAvgPe)}×`, value: q.epsTtm * peerAvgPe });
+  if (q.bookValue && peerAvgPB) anchors.push({ label: `bransje-P/B ${nf1.format(peerAvgPB)}×`, value: q.bookValue * peerAvgPB });
+  const anchorAvg = anchors.length ? avg(anchors.map((a) => a.value)) : q.price;
+
+  // Realisert volatilitet → usikkerhetsbånd som vokser med kvadratroten av tid.
+  const volD = dailyVol(STB_PRICES.oneY.map((d) => d[1]));
+  const volAnnual = volD * Math.sqrt(252) * 100;
+  const bandPct = (m) => Math.min(volD * Math.sqrt(m * 21), 0.35);
+
+  // Track record – kjøres én gang (uavhengig av valgt periode).
+  const bt = backtestSignal(STB_PRICES.oneY, 20, 21);
+  const track = document.getElementById("ai-track");
+  if (track) {
+    track.innerHTML = "";
+    [
+      ["Treffrate retning", bt.rate == null ? "–" : nf0.format(bt.rate) + " %"],
+      ["Testede signaler", bt.total ? nf0.format(bt.total) : "–"],
+      ["Snittavk./signal", bt.avgFollow == null ? "–" : pct1(bt.avgFollow)],
+      ["Årlig volatilitet", nf0.format(volAnnual) + " %"],
+    ].forEach(([l, v]) => track.appendChild(h(`<div class="ministat"><div class="label">${l}</div><div class="val">${v}</div></div>`)));
+  }
 
   const lbWrap = document.getElementById("ai-lookback-buttons");
   AI_LOOKBACKS.forEach(([key, label]) => {
@@ -271,15 +326,14 @@ function renderAiExpert() {
   });
 
   const PADL = 48, PADR = 16, TOP = 14, BOT = 268, XR = 800 - PADR, MS_M = 30.44 * 86400000;
-  const bandPct = (m) => Math.min(0.03 * Math.sqrt(m), 0.15);
 
   function draw() {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     const hist = aiLookback(lb), n = hist.length;
     const prices = hist.map((d) => d[1]);
-    const target = q.analystTarget || prices[n - 1];
+    const target = anchorAvg; // blandet fundamental forankring (analytikermål + bransje-P/E + bransje-P/B)
 
-    // AI-estimat: glidende verdivurdering forankret gradvis mot analytikernes snittmål.
+    // AI-estimat: glidende verdivurdering forankret gradvis mot den fundamentale verdien.
     const win = Math.max(5, Math.round(n / 6));
     const sma = prices.map((_, i) => { const a = Math.max(0, i - win + 1), s = prices.slice(a, i + 1); return s.reduce((x, v) => x + v, 0) / s.length; });
     const fair = sma.map((v, i) => { const w = (i / (n - 1)) * 0.35; return v * (1 - w) + target * w; });
@@ -356,9 +410,10 @@ function renderAiExpert() {
 
     // --- Vurdering ---
     const gap = ((q.price - fairEnd) / fairEnd) * 100;
-    const peerAvgPe = avg(STB_DATA.peers.filter((p) => !p.isSubject).map((p) => p.pe));
-    const peerAvgY = avg(STB_DATA.peers.filter((p) => !p.isSubject).map((p) => p.dividendYield));
     const ret1y = oneYearRet(STB_PRICES.oneY);
+    const peerRets = STB_DATA.peers.filter((p) => !p.isSubject && p.oneYearPct != null).map((p) => p.oneYearPct);
+    const peerAvgRet = peerRets.length ? avg(peerRets) : null;
+    const rangePos = q.week52High > q.week52Low ? ((q.price - q.week52Low) / (q.week52High - q.week52Low)) * 100 : 50;
     let rating, cls;
     if (gap > 6) { rating = "Dyr priset"; cls = "down"; }
     else if (gap < -6) { rating = "Billig priset"; cls = "up"; }
@@ -368,9 +423,11 @@ function renderAiExpert() {
 
     const signals = [
       sig("Verdi vs. kurs", gap <= 0, `Kursen er ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-estimatet`),
-      sig("Kursmål", q.price <= target, `${nf1.format(Math.abs((q.price / target - 1) * 100))} % ${q.price <= target ? "opp til" : "over"} analytikernes mål`),
+      sig("Analytikermål", q.analystTarget ? q.price <= q.analystTarget : true, q.analystTarget ? `${nf1.format(Math.abs((q.price / q.analystTarget - 1) * 100))} % ${q.price <= q.analystTarget ? "opp til" : "over"} snittmål ${kr(q.analystTarget, 0)}` : "ingen data"),
       sig("P/E vs. bransjen", q.peTtm <= peerAvgPe, `P/E ${nf1.format(q.peTtm)} mot snitt ${nf1.format(peerAvgPe)}`),
       sig("Utbytte vs. bransjen", q.dividendYield >= peerAvgY, `${nf1.format(q.dividendYield)} % mot snitt ${nf1.format(peerAvgY)} %`),
+      sig("Relativ styrke", peerAvgRet != null && ret1y >= peerAvgRet, peerAvgRet != null ? `${pct1(ret1y)} mot bransje ${pct1(peerAvgRet)} siste år` : "ingen data"),
+      sig("52-ukers posisjon", rangePos <= 60, `${nf0.format(rangePos)} % opp i 52-ukers spennet`),
       sig("Soliditet", k.solvency >= 175, `Solvens ${k.solvency} % ${k.solvency >= 175 ? "gir rom for tilbakekjøp" : ""}`),
     ];
     const sc = signals.filter((s) => s.good).length - signals.filter((s) => !s.good).length;
@@ -378,16 +435,32 @@ function renderAiExpert() {
     signals.forEach((s) => chips.appendChild(h(`<span class="ai-chip ${s.good ? "good" : "bad"}">${s.good ? "▲" : "▼"} ${s.label}<span class="ai-chip-sub">${s.detail}</span></span>`)));
 
     const fundament = sc >= 2 ? "trekker i positiv retning" : sc <= -2 ? "trekker i negativ retning" : "er blandet";
-    let txt = `Etter en oppgang på ${pct1(ret1y)} det siste året handles Storebrand nå ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-ekspertens estimerte verdi på ${kr(fairEnd, 0)}. ` +
-      `Verdsettelsen (P/E ${nf1.format(q.peTtm)}) er ${q.peTtm <= peerAvgPe ? "lavere" : "høyere"} enn snittet for lignende selskaper (${nf1.format(peerAvgPe)}), direkteavkastningen er ${nf1.format(q.dividendYield)} %, og solvensmarginen på ${k.solvency} % ${k.solvency >= 175 ? "gir rom for fortsatte tilbakekjøp" : "er solid"}. `;
-    if (fwd > 0) txt += `AI-ekspertens anslag ${fwd} måneder frem: <strong>~${kr(fVals[fwd - 1], 0)}</strong> (usikkerhet ±${nf0.format(bandPct(fwd) * 100)} %), på vei mot analytikernes mål på ${kr(target, 0)}. `;
-    txt += `Konklusjon: aksjen ser <strong>${rating.toLowerCase()}</strong> ut mot sin egen verdibane, mens verdsettelse og soliditet ${fundament}.`;
+    const anchorTxt = anchors.map((a) => `${a.label} ${kr(a.value, 0)}`).join(", ");
+    let txt = `Etter en oppgang på ${pct1(ret1y)} det siste året handles Storebrand nå ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-ekspertens estimerte verdi på ${kr(fairEnd, 0)}. `;
+    if (anchors.length > 1) txt += `Den verdien er forankret i ${anchors.length} uavhengige mål (${anchorTxt}) med et snitt på ${kr(anchorAvg, 0)}. `;
+    txt += `Verdsettelsen (P/E ${nf1.format(q.peTtm)}) er ${q.peTtm <= peerAvgPe ? "lavere" : "høyere"} enn snittet for lignende selskaper (${nf1.format(peerAvgPe)}), og solvensmarginen på ${k.solvency} % ${k.solvency >= 175 ? "gir rom for fortsatte tilbakekjøp" : "er solid"}. `;
+    if (fwd > 0) txt += `Anslag ${fwd} måneder frem: <strong>~${kr(fVals[fwd - 1], 0)}</strong>, med et usikkerhetsbånd på ±${nf0.format(bandPct(fwd) * 100)} % utledet fra aksjens faktiske volatilitet (${nf0.format(volAnnual)} % årlig). `;
+    txt += `Historisk har retningssignalet truffet ${bt.rate == null ? "–" : nf0.format(bt.rate) + " %"} av gangene på ${bt.total} tester siste år. Konklusjon: aksjen ser <strong>${rating.toLowerCase()}</strong> ut mot sin egen verdibane, mens verdsettelse og soliditet ${fundament}.`;
     document.getElementById("ai-rationale").innerHTML = txt;
   }
   draw();
 }
 const avg = (a) => a.reduce((s, v) => s + v, 0) / a.length;
 const sig = (label, good, detail) => ({ label, good, detail });
+
+// Ekte språkmodell-generert kommentar (js/ai-view.js), hvis den finnes.
+function renderAiView() {
+  const box = document.getElementById("ai-llm");
+  if (!box || typeof STB_AI_VIEW === "undefined" || !STB_AI_VIEW.body) return;
+  const v = STB_AI_VIEW;
+  box.hidden = false;
+  box.innerHTML =
+    `<div class="ai-llm-head"><span class="ai-llm-tag">Språkmodell-vurdering</span>` +
+    (v.verdict ? `<span class="ai-llm-verdict">${v.verdict}</span>` : "") + `</div>` +
+    (v.headline ? `<div class="ai-llm-title">${v.headline}</div>` : "") +
+    `<p class="ai-llm-body">${v.body}</p>` +
+    `<div class="ai-llm-foot">Generert ${v.generated || ""} av en språkmodell ut fra de ferske nøkkeltallene på siden.</div>`;
+}
 
 /* ---------- 52-ukers meter ---------- */
 function renderRangeMeter() {
@@ -550,6 +623,7 @@ renderStats();
 renderPriceChart();
 renderRangeMeter();
 renderAiExpert();
+renderAiView();
 renderCompany();
 renderDividends();
 renderKeyFigures();
