@@ -642,6 +642,10 @@ function renderReports() {
 function renderInsiders() {
   const d = STB_DATA.insiders;
   document.getElementById("insider-lead").textContent = d.note;
+  if (d.sourceUrl) {
+    document.getElementById("insider-source").innerHTML =
+      `<a href="${d.sourceUrl}" target="_blank" rel="noopener" class="src-pill">${d.sourceLabel || "Oslo Børs NewsWeb ↗"}</a>`;
+  }
   const tb = document.getElementById("insider-table-body");
   d.transactions.forEach((t) => {
     const val = t.shares * t.price;

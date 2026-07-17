@@ -200,7 +200,9 @@ const STB_DATA = {
   },
 
   insiders: {
-    note: "Primærinnsidere i Storebrand har i hovedsak vært nettokjøpere det siste året — et signal markedet gjerne tolker som positivt, men det er ingen garanti for fremtidig kursutvikling. Kilde: børsmeldinger via Cision/MFN.",
+    note: "Primærinnsidere i Storebrand har i hovedsak vært nettokjøpere det siste året — et signal markedet gjerne tolker som positivt, men det er ingen garanti for fremtidig kursutvikling. Offisiell primærkilde er Oslo Børs NewsWeb (meldepliktig handel for primærinnsidere); se lenken under for alltid oppdaterte meldinger.",
+    sourceUrl: "https://newsweb.oslobors.no/search?issuer=1955",
+    sourceLabel: "Oslo Børs NewsWeb — Storebrands børsmeldinger ↗",
     transactions: [
       {
         date: "April 2026",
@@ -260,6 +262,7 @@ const STB_DATA = {
   ],
 
   sources: [
+    { label: "Oslo Børs NewsWeb — Storebrands børsmeldinger (offisiell primærkilde)", url: "https://newsweb.oslobors.no/search?issuer=1955" },
     { label: "Yahoo Finance — STB.OL kurshistorikk (chart-API)", url: "https://finance.yahoo.com/quote/STB.OL/" },
     { label: "stockanalysis.com — STB.OL nøkkeltall og utbyttehistorikk", url: "https://stockanalysis.com/quote/osl/STB/" },
     { label: "stockanalysis.com — peers (GJF, PROT, TRYG, SAMPO)", url: "https://stockanalysis.com/quote/osl/GJF/" },
