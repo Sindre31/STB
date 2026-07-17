@@ -325,6 +325,29 @@ function backtestSignal(series, win, horizon) {
   }
   return { hits, total, rate: total ? (hits / total) * 100 : null, avgFollow: total ? (followRet / total) * 100 : null };
 }
+// B3: ensemble av tre kausale delmodeller. Vektene settes fra treffrate på FØRSTE halvdel (trening),
+// og den kombinerte modellen valideres på ANDRE halvdel (walk-forward – ikke overtilpasset).
+function ensembleBacktest(series) {
+  const p = series.map((d) => d[1]);
+  const sma = (i, w) => { const a = Math.max(0, i - w + 1), s = p.slice(a, i + 1); return s.reduce((x, v) => x + v, 0) / s.length; };
+  const defs = [
+    { name: "Mean reversion", dir: (i) => (p[i] < sma(i, 20) ? 1 : -1) },
+    { name: "Momentum 3 mnd", dir: (i) => (i >= 66 ? (p[i] > p[i - 66] ? 1 : -1) : 0) },
+    { name: "Langsiktig verdi", dir: (i) => (p[i] < sma(i, 120) ? 1 : -1) },
+  ];
+  const H = 21, warm = 120, lastI = p.length - 1 - H;
+  if (lastI - warm < 20) return null;
+  const mid = Math.floor((warm + lastI) / 2);
+  const hit = defs.map(() => ({ h: 0, t: 0 }));
+  for (let i = warm; i < mid; i++) { const fut = p[i + H] / p[i] - 1; defs.forEach((d, j) => { const dir = d.dir(i); if (dir) { hit[j].t++; if ((dir > 0 && fut > 0) || (dir < 0 && fut < 0)) hit[j].h++; } }); }
+  const rates = hit.map((x) => (x.t ? (x.h / x.t) * 100 : 50));
+  const weights = rates.map((r) => Math.max(0, r - 50)), wsum = weights.reduce((a, b) => a + b, 0) || 1;
+  const wn = weights.map((w) => w / wsum);
+  let vh = 0, vt = 0;
+  for (let i = mid; i <= lastI; i++) { const fut = p[i + H] / p[i] - 1; const score = defs.reduce((a, d, j) => a + wn[j] * d.dir(i), 0); if (Math.abs(score) > 0.15) { vt++; if ((score > 0 && fut > 0) || (score < 0 && fut < 0)) vh++; } }
+  const iC = p.length - 1, curDirs = defs.map((d) => d.dir(iC));
+  return { models: defs.map((d, j) => ({ name: d.name, rate: rates[j], weight: wn[j], dir: curDirs[j] })), valRate: vt ? (vh / vt) * 100 : null, valN: vt, curScore: defs.reduce((a, d, j) => a + wn[j] * curDirs[j], 0) };
+}
 function renderAiExpert() {
   const svg = document.getElementById("ai-chart");
   const q = STB_DATA.quote, k = STB_DATA.kpis;
@@ -341,13 +364,23 @@ function renderAiExpert() {
   if (q.bookValue && peerAvgPB) anchors.push({ label: `bransje-P/B ${nf1.format(peerAvgPB)}×`, value: q.bookValue * peerAvgPB });
   const anchorAvg = anchors.length ? avg(anchors.map((a) => a.value)) : q.price;
 
-  // Realisert volatilitet → usikkerhetsbånd som vokser med kvadratroten av tid.
+  // B1: løpende TTM-EPS (stegfunksjon fra ekte årlig EPS + dagens TTM) → verdilinja følger inntjeningen.
+  const epsBreaks = (STB_DATA.financialsHistory || []).map((f) => ({ t: Date.parse(`${f.year + 1}-02-15`), eps: f.eps }))
+    .concat(q.epsTtm ? [{ t: Date.now(), eps: q.epsTtm }] : []).sort((a, b) => a.t - b.t);
+  const epsAt = (t) => { let e = epsBreaks.length ? epsBreaks[0].eps : q.epsTtm; for (const b of epsBreaks) if (t >= b.t) e = b.eps; return e; };
+  const fairMult = (q.epsTtm && anchorAvg) ? anchorAvg / q.epsTtm : null; // implisitt "rimelig" P/E
+
+  // Realisert volatilitet → usikkerhetsbånd. B2: analytiker-spennet (høy−lav) legges til som ekstra usikkerhet.
   const volD = dailyVol(STB_PRICES.oneY.map((d) => d[1]));
   const volAnnual = volD * Math.sqrt(252) * 100;
-  const bandPct = (m) => Math.min(volD * Math.sqrt(m * 21), 0.35);
+  const spreadFrac = (q.analystHigh && q.analystLow && q.analystTarget) ? (q.analystHigh - q.analystLow) / q.analystTarget : 0;
+  const bandPct = (m) => Math.min(Math.hypot(volD * Math.sqrt(m * 21), spreadFrac * 0.5 * (m / 12)), 0.4);
+  // B5: dyr/billig-grense skaleres med volatilitet (strammere i rolige perioder, løsere i urolige).
+  const thr = Math.max(4, Math.min(10, volD * Math.sqrt(21) * 100 * 0.9));
 
-  // Track record – kjøres én gang (uavhengig av valgt periode).
+  // Track record + ensemble – kjøres én gang (uavhengig av valgt periode).
   const bt = backtestSignal(STB_PRICES.oneY, 20, 21);
+  const ens = ensembleBacktest(STB_PRICES.oneY);
   const track = document.getElementById("ai-track");
   if (track) {
     track.innerHTML = "";
@@ -380,10 +413,17 @@ function renderAiExpert() {
     const prices = hist.map((d) => d[1]);
     const target = anchorAvg; // blandet fundamental forankring (analytikermål + bransje-P/E + bransje-P/B)
 
-    // AI-estimat: glidende verdivurdering forankret gradvis mot den fundamentale verdien.
+    // AI-estimat: glidende verdivurdering (følger kurs) forankret gradvis mot fundamental verdi
+    // som selv følger inntjeningen (TTM-EPS × implisitt rimelig multippel).
     const win = Math.max(5, Math.round(n / 6));
     const sma = prices.map((_, i) => { const a = Math.max(0, i - win + 1), s = prices.slice(a, i + 1); return s.reduce((x, v) => x + v, 0) / s.length; });
-    const fair = sma.map((v, i) => { const w = (i / (n - 1)) * 0.35; return v * (1 - w) + target * w; });
+    const tsL = hist.map((d) => Date.parse(d[0]));
+    const fair = sma.map((v, i) => {
+      const w = (i / (n - 1)) * 0.4;
+      const epsFair = fairMult ? epsAt(tsL[i]) * fairMult : anchorAvg;
+      const fund = fairMult ? epsFair * 0.6 + anchorAvg * 0.4 : anchorAvg;
+      return v * (1 - w) + fund * w;
+    });
     const fairEnd = fair[n - 1];
 
     // Fremtidsprojeksjon: fra dagens estimat mot analytikernes 12-mnd mål, med voksende usikkerhet.
@@ -462,8 +502,8 @@ function renderAiExpert() {
     const peerAvgRet = peerRets.length ? avg(peerRets) : null;
     const rangePos = q.week52High > q.week52Low ? ((q.price - q.week52Low) / (q.week52High - q.week52Low)) * 100 : 50;
     let rating, cls;
-    if (gap > 6) { rating = "Dyr priset"; cls = "down"; }
-    else if (gap < -6) { rating = "Billig priset"; cls = "up"; }
+    if (gap > thr) { rating = "Dyr priset"; cls = "down"; }
+    else if (gap < -thr) { rating = "Billig priset"; cls = "up"; }
     else { rating = "Rimelig priset"; cls = "neutral"; }
     document.getElementById("ai-badge").innerHTML = `<span class="ai-badge ${cls}">AI-ekspert: ${rating}</span>`;
     document.getElementById("ai-estimate").textContent = fwd > 0 ? `Anslag om ${fwd} mnd: ~${kr(fVals[fwd - 1], 0)}` : "";
@@ -477,6 +517,8 @@ function renderAiExpert() {
       sig("52-ukers posisjon", rangePos <= 60, `${nf0.format(rangePos)} % opp i 52-ukers spennet`),
       sig("Soliditet", k.solvency >= 175, `Solvens ${k.solvency} % ${k.solvency >= 175 ? "gir rom for tilbakekjøp" : ""}`),
     ];
+    // B4: enkelt rentesignal – stigende lange renter er normalt positivt for et livselskap.
+    if (q.rate10yChg3m != null) signals.push(sig("Renteretning", q.rate10yChg3m >= 0, `Lange renter (10 år, global) ${q.rate10yChg3m >= 0 ? "opp" : "ned"} ${nf2.format(Math.abs(q.rate10yChg3m))} pp siste 3 mnd — ${q.rate10yChg3m >= 0 ? "positivt" : "negativt"} for livselskap`));
     const sc = signals.filter((s) => s.good).length - signals.filter((s) => !s.good).length;
     const chips = document.getElementById("ai-signals"); chips.innerHTML = "";
     signals.forEach((s) => chips.appendChild(h(`<span class="ai-chip ${s.good ? "good" : "bad"}">${s.good ? "▲" : "▼"} ${s.label}<span class="ai-chip-sub">${s.detail}</span></span>`)));
@@ -486,11 +528,12 @@ function renderAiExpert() {
     let txt = `Etter en oppgang på ${pct1(ret1y)} det siste året handles Storebrand nå ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-ekspertens estimerte verdi på ${kr(fairEnd, 0)}. `;
     if (anchors.length > 1) txt += `Den verdien er forankret i ${anchors.length} uavhengige mål (${anchorTxt}) med et snitt på ${kr(anchorAvg, 0)}. `;
     txt += `Verdsettelsen (P/E ${nf1.format(q.peTtm)}) er ${q.peTtm <= peerAvgPe ? "lavere" : "høyere"} enn snittet for lignende selskaper (${nf1.format(peerAvgPe)}), og solvensmarginen på ${k.solvency} % ${k.solvency >= 175 ? "gir rom for fortsatte tilbakekjøp" : "er solid"}. `;
-    if (fwd > 0) txt += `Anslag ${fwd} måneder frem: <strong>~${kr(fVals[fwd - 1], 0)}</strong>, med et usikkerhetsbånd på ±${nf0.format(bandPct(fwd) * 100)} % utledet fra aksjens faktiske volatilitet (${nf0.format(volAnnual)} % årlig). `;
-    txt += `Historisk har retningssignalet truffet ${bt.rate == null ? "–" : nf0.format(bt.rate) + " %"} av gangene på ${bt.total} tester siste år. Konklusjon: aksjen ser <strong>${rating.toLowerCase()}</strong> ut mot sin egen verdibane, mens verdsettelse og soliditet ${fundament}.`;
+    if (fwd > 0) txt += `Anslag ${fwd} måneder frem: <strong>~${kr(fVals[fwd - 1], 0)}</strong>, med et usikkerhetsbånd på ±${nf0.format(bandPct(fwd) * 100)} % som kombinerer aksjens faktiske volatilitet (${nf0.format(volAnnual)} % årlig) og spriket i analytikernes mål. `;
+    if (ens) txt += `En ensemblemodell (mean reversion + momentum + langsiktig verdi, vektet etter historisk treffrate) gir nå et <strong>${ens.curScore >= 0.15 ? "positivt" : ens.curScore <= -0.15 ? "negativt" : "nøytralt"}</strong> samlet signal og traff ${ens.valRate == null ? "–" : nf0.format(ens.valRate) + " %"} på uavhengige valideringsdata. `;
+    txt += `Grensen for dyr/billig er nå ±${nf1.format(thr)} % (kalibrert mot volatiliteten). Konklusjon: aksjen ser <strong>${rating.toLowerCase()}</strong> ut mot sin egen verdibane, mens verdsettelse og soliditet ${fundament}.`;
     document.getElementById("ai-rationale").innerHTML = txt;
 
-    aiState = { rating, gap, fairEnd, anchors, anchorAvg, sc, signals, volAnnual, bt, peerAvgPe, ret1y, fwd, fLast: fwd > 0 ? fVals[fwd - 1] : null, target };
+    aiState = { rating, gap, fairEnd, anchors, anchorAvg, sc, signals, volAnnual, bt, ens, thr, fairMult, spreadFrac, peerAvgPe, ret1y, fwd, fLast: fwd > 0 ? fVals[fwd - 1] : null, target };
   }
   draw();
 
@@ -509,17 +552,21 @@ function buildMethodModal() {
     `<div class="modal-sub">Modellen er <strong>ikke en svart boks</strong>. Den kjører åpent i nettleseren på de ekte tallene på siden, og hvert steg kan etterprøves. Den er et beslutningsstøtte-verktøy, ikke et kjøps- eller salgsråd.</div>` +
     `<div class="method-h">Metodene den bruker</div>` +
     `<ul class="method-list">` +
-    `<li><strong>Verdilinje:</strong> et glidende gjennomsnitt av kursen som gradvis trekkes mot en fundamental verdi (mean reversion).</li>` +
+    `<li><strong>Verdilinje:</strong> et glidende snitt av kursen som trekkes mot en fundamental verdi. Den fundamentale delen <em>følger inntjeningen</em> — resultat per aksje (TTM) × en implisitt rimelig multippel${s.fairMult ? ` (~${nf1.format(s.fairMult)}×)` : ""} — så verdien flytter seg når resultatene endres, ikke bare når kursen gjør det.</li>` +
     `<li><strong>Fundamental forankring:</strong> snittet av flere uavhengige ankere — ${anchorTxt} — gir ${s.anchorAvg ? kr(s.anchorAvg, 0) : "–"}.</li>` +
-    `<li><strong>Sju signaler:</strong> verdi vs. kurs, analytikermål, P/E og utbytte mot bransjen, relativ styrke, 52-ukers posisjon og soliditet.</li>` +
-    `<li><strong>Fremtidsprojeksjon:</strong> konvergerer mot den fundamentale verdien, med et usikkerhetsbånd utledet fra aksjens <em>faktiske</em> volatilitet (${s.volAnnual != null ? nf0.format(s.volAnnual) + " % årlig" : "–"}).</li>` +
-    `<li><strong>Backtest:</strong> retningssignalet testes kausalt på siste års kurser — treffrate ${s.bt && s.bt.rate != null ? nf0.format(s.bt.rate) + " %" : "–"} på ${s.bt ? s.bt.total : "–"} tester.</li>` +
+    `<li><strong>${s.signals ? s.signals.length : 7} signaler:</strong> verdi vs. kurs, analytikermål, P/E og utbytte mot bransjen, relativ styrke, 52-ukers posisjon, soliditet${s.signals && s.signals.some((x) => x.label === "Renteretning") ? " og renteretning" : ""}.</li>` +
+    `<li><strong>Fremtidsprojeksjon:</strong> konvergerer mot fundamental verdi, med et usikkerhetsbånd som kombinerer aksjens <em>faktiske</em> volatilitet (${s.volAnnual != null ? nf0.format(s.volAnnual) + " % årlig" : "–"}) og spriket mellom høyeste og laveste analytikermål.</li>` +
+    `<li><strong>Ensemble (walk-forward):</strong> tre delmodeller (mean reversion, momentum, langsiktig verdi) vektes etter treffrate på en treningsperiode og valideres på en senere, uavhengig periode — så vektene ikke er overtilpasset.</li>` +
+    `<li><strong>Dynamisk terskel:</strong> grensen for «dyr»/«billig» skaleres med volatiliteten (nå ±${s.thr != null ? nf1.format(s.thr) : "6"} %) i stedet for et fast tall.</li>` +
     `<li><strong>Språkmodell (valgfri):</strong> en Anthropic Claude-modell skriver en kort kommentar ut fra de ferske tallene. ${usesLLM ? "Aktiv nå." : "Ikke aktiv (krever API-nøkkel) — den regelbaserte vurderingen brukes i stedet."}</li>` +
     `</ul>` +
+    (s.ens ? `<div class="method-h">Ensemble – delmodeller</div><table class="ens-table"><thead><tr><th>Delmodell</th><th class="num">Treffrate</th><th class="num">Vekt</th><th>Nå</th></tr></thead><tbody>` +
+      s.ens.models.map((m) => `<tr><td>${m.name}</td><td class="num">${nf0.format(m.rate)} %</td><td class="num">${nf0.format(m.weight * 100)} %</td><td><span style="color:${m.dir > 0 ? "var(--up)" : m.dir < 0 ? "var(--down)" : "var(--mut)"}">${m.dir > 0 ? "▲ opp" : m.dir < 0 ? "▼ ned" : "–"}</span></td></tr>`).join("") +
+      `</tbody></table><p class="ntext" style="color:var(--mut);margin-top:6px">Kombinert traff ensemblet ${s.ens.valRate == null ? "–" : nf0.format(s.ens.valRate) + " %"} på ${s.ens.valN} uavhengige valideringstester (vekter satt på en tidligere treningsperiode).</p>` : "") +
     `<div class="method-h">Hvorfor konklusjonen «${s.rating || "–"}» akkurat nå</div>` +
     `<p class="ntext" style="color:var(--tx)">Kursen (${kr(q.price, 0)}) ligger ${s.gap != null ? nf1.format(Math.abs(s.gap)) + " % " + (s.gap >= 0 ? "over" : "under") : "–"} den estimerte verdien (${s.fairEnd != null ? kr(s.fairEnd, 0) : "–"}). ` +
-    `Av de sju signalene peker <strong style="color:var(--up)">${pos} positivt</strong> og <strong style="color:var(--down)">${neg} negativt</strong> (nettoscore ${s.sc >= 0 ? "+" : ""}${s.sc}). ` +
-    `Grensen for «dyr»/«billig» er ±6 % mot verdilinja; innenfor det kalles den «rimelig priset».</p>` +
+    `Av signalene peker <strong style="color:var(--up)">${pos} positivt</strong> og <strong style="color:var(--down)">${neg} negativt</strong> (nettoscore ${s.sc >= 0 ? "+" : ""}${s.sc}). ` +
+    `Grensen for «dyr»/«billig» er nå ±${s.thr != null ? nf1.format(s.thr) : "6"} % (kalibrert mot volatiliteten); innenfor det kalles den «rimelig priset».</p>` +
     `<div class="method-sig" id="method-sig"></div>` +
     `<p class="ntext" style="margin-top:14px;color:var(--mut)">Modellen forutsier ikke fremtiden og tar ikke høyde for nyheter eller hendelser som ikke ligger i tallene. Bruk den som ett av flere verktøy.</p>`;
   const sigBox = wrap.querySelector("#method-sig");

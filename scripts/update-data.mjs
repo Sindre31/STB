@@ -86,6 +86,18 @@ async function fetchFundamentals(ticker, auth) {
 }
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null && !Number.isNaN(v)));
 
+// Lange renter (10 år) som global proxy for rentemiljøet Storebrand er følsomt for.
+// Vi bruker kun retningen (endring siste ~3 mnd), ikke absoluttnivået, så skala er uvesentlig.
+async function fetchRate() {
+  try {
+    const r = await fetchChart("%5ETNX", "6mo", "1wk");
+    const s = seriesFrom(r, "day").map((d) => d[1]);
+    if (s.length < 3) return {};
+    const last = s[s.length - 1], ago = s[Math.max(0, s.length - 14)];
+    return { rate10yChg3m: round(last - ago, 2) };
+  } catch { return {}; }
+}
+
 // ---- Børsmeldinger fra Oslo Børs NewsWeb (best effort) ----
 // issuer-filteret i API-et virker ikke, så vi henter et datospenn og filtrerer på issuerId 1955.
 // NewsWeb publiserer norsk + engelsk som par; vi foretrekker den norske tittelen.
@@ -219,6 +231,7 @@ async function main() {
   // ---- Nøkkeltall (best effort – hele blokken hoppes over hvis crumb feiler) ----
   let auth = null;
   try { auth = await getCrumb(); } catch (e) { console.warn("Crumb feilet, hopper over nøkkeltall:", e.message); }
+  const rate = await fetchRate();
 
   let stbFund = {};
   const peerFund = {};
@@ -236,6 +249,7 @@ async function main() {
     week52High: round(meta.fiftyTwoWeekHigh),
     volume: meta.regularMarketVolume,
     ...stbFund,
+    ...rate,
     perf: { oneY: pctChange(oneY), fiveY: pctChange(fiveY), sinceGraph: pctChange(max) },
   });
 
