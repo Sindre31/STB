@@ -84,7 +84,7 @@ const hideTip = () => tooltip.classList.remove("show");
 
 /* ---------- Nav + header ---------- */
 const NAV = [
-  ["oversikt", "Oversikt"], ["kurs", "Kurs"], ["selskap", "Selskap"],
+  ["oversikt", "Oversikt"], ["kurs", "Kurs"], ["ai", "AI-ekspert"], ["selskap", "Selskap"],
   ["utbytte", "Utbytte"], ["nokkeltall", "Nøkkeltall"], ["rapporter", "Rapporter"],
   ["innsidehandel", "Innsidehandel"], ["sammenligning", "Sammenligning"], ["nyheter", "Nyheter"], ["kilder", "Kilder"],
 ];
@@ -110,7 +110,7 @@ function renderStats() {
     ["P/E", nf1.format(q.peTtm), "Siste 12 mnd"],
     ["Direkteavkastning", nf1.format(q.dividendYield) + " %", "Utbytte/kurs"],
     ["Solvensmargin", k.solvency + " %", "Bufferkapital"],
-    ["Avkastning 1 år", pct1(q.perf.oneY), "Kursutvikling"],
+    ["Avkastning 1 år", pct1(oneYearRet(STB_PRICES.oneY) ?? q.perf.oneY), "Kursutvikling"],
   ];
   const g = document.getElementById("stat-grid");
   tiles.forEach(([label, val, sub]) => {
@@ -121,10 +121,14 @@ function renderStats() {
 /* ---------- Prisgraf med periode + peer-sammenligning ---------- */
 const PERIODS = [["oneY", "1 år"], ["fiveY", "5 år"], ["max", "Maks"]];
 const PEER_SHORT = { "GJF.OL": "Gjensidige", "PROT.OL": "Protector", "TRYG.CO": "Tryg", "SAMPO.HE": "Sampo" };
+const PEER_COLORS = { "GJF.OL": "#6ea8dc", "PROT.OL": "#3ecf8e", "TRYG.CO": "#c58af0", "SAMPO.HE": "#e8975a" };
+// 1-års avkastning beregnet fra daglig serie – samme metode for STB og alle peers.
+const oneYearRet = (series) => (series && series.length > 1 ? ((series[series.length - 1][1] / series[0][1]) - 1) * 100 : null);
 
 function renderPriceChart() {
   const svg = document.getElementById("price-chart");
-  let period = "oneY", cmp = null;
+  let period = "oneY";
+  const cmp = new Set(); // flere selskaper kan sammenlignes samtidig
 
   const pBtns = document.getElementById("period-buttons");
   PERIODS.forEach(([key, label]) => {
@@ -137,8 +141,8 @@ function renderPriceChart() {
     if (!STB_PEER_PRICES[tk]) return;
     const b = h(`<button class="pbtn" data-tk="${tk}">${PEER_SHORT[tk]}</button>`);
     b.addEventListener("click", () => {
-      cmp = cmp === tk ? null : tk;
-      [...peerWrap.querySelectorAll(".pbtn")].forEach((x) => x.classList.toggle("active", x.dataset.tk === cmp));
+      if (cmp.has(tk)) { cmp.delete(tk); b.classList.remove("active"); b.style.color = ""; b.style.borderColor = ""; }
+      else { cmp.add(tk); b.classList.add("active"); b.style.color = PEER_COLORS[tk]; b.style.borderColor = PEER_COLORS[tk]; }
       draw();
     });
     peerWrap.appendChild(b);
@@ -147,51 +151,50 @@ function renderPriceChart() {
   const PADL = 48, PADR = 16, TOP = 14, BOT = 292, W = 800, XR = W - PADR;
   function draw() {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    const stb = STB_PRICES[period];
-    const comparing = cmp && STB_PEER_PRICES[cmp] ? STB_PEER_PRICES[cmp][period] : null;
+    const comparing = cmp.size > 0;
 
-    // Indekser hvis sammenligning
-    let sA, sB, yMin, yMax, yFmt;
+    // Bygg liste av serier som skal tegnes. I sammenligningsmodus indekseres alt til 100.
+    const idx = (arr) => arr.map((d) => (arr[0][1] ? (d[1] / arr[0][1]) * 100 : 100));
+    const series = [];
+    series.push({ name: "Storebrand", color: "var(--acc)", width: 2.2, raw: STB_PRICES[period], vals: comparing ? idx(STB_PRICES[period]) : STB_PRICES[period].map((d) => d[1]) });
     if (comparing) {
-      const idx = (arr) => arr.map((d, i) => arr[0][1] ? (d[1] / arr[0][1]) * 100 : 100);
-      sA = idx(stb); sB = idx(comparing);
-      yMin = Math.min(...sA, ...sB); yMax = Math.max(...sA, ...sB);
-      yFmt = (v) => nf0.format(v);
-    } else {
-      sA = stb.map((d) => d[1]); sB = null;
-      yMin = Math.min(...sA); yMax = Math.max(...sA);
-      yFmt = (v) => nf0.format(v);
+      [...cmp].forEach((tk) => {
+        const arr = STB_PEER_PRICES[tk][period];
+        series.push({ name: PEER_SHORT[tk], color: PEER_COLORS[tk], width: 2, raw: arr, vals: idx(arr) });
+      });
     }
-    const padY = (yMax - yMin) * 0.08 || 1; yMin -= padY; yMax += padY;
-    const xA = (i, n) => PADL + (i / (n - 1)) * (XR - PADL);
-    const y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
 
-    // gridlines + y-ticks
+    let yMin = Math.min(...series.flatMap((s) => s.vals));
+    let yMax = Math.max(...series.flatMap((s) => s.vals));
+    const padY = (yMax - yMin) * 0.08 || 1; yMin -= padY; yMax += padY;
+    const xAt = (i, n) => PADL + (i / (n - 1)) * (XR - PADL);
+    const y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
+    const yFmt = comparing ? (v) => nf0.format(v) : (v) => nf0.format(v);
+
     for (let s = 0; s <= 4; s++) {
       const v = yMin + (yMax - yMin) * (s / 4), yy = y(v);
       svg.appendChild(el("line", { x1: PADL, x2: XR, y1: yy, y2: yy, class: "chart-grid" }));
       svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, yFmt(v)));
     }
-    // x-ticks
+    const stb = STB_PRICES[period];
     [0, Math.floor(stb.length / 2), stb.length - 1].forEach((i) => {
-      svg.appendChild(el("text", { x: xA(i, stb.length), y: 314, "text-anchor": i === 0 ? "start" : i === stb.length - 1 ? "end" : "middle", class: "chart-axis" }, stb[i][0]));
+      svg.appendChild(el("text", { x: xAt(i, stb.length), y: 314, "text-anchor": i === 0 ? "start" : i === stb.length - 1 ? "end" : "middle", class: "chart-axis" }, stb[i][0]));
     });
 
-    const path = (arr) => { let d = ""; arr.forEach((v, i) => { d += (i ? " L " : "M ") + xA(i, arr.length) + " " + y(v); }); return d; };
+    const pathFor = (vals) => { let d = ""; vals.forEach((v, i) => { d += (i ? " L " : "M ") + xAt(i, vals.length) + " " + y(v); }); return d; };
 
     if (!comparing) {
-      let ad = path(sA) + ` L ${xA(sA.length - 1, sA.length)} ${BOT} L ${PADL} ${BOT} Z`;
-      svg.appendChild(el("path", { d: ad, fill: "var(--acc)", "fill-opacity": "0.08", stroke: "none" }));
-    } else {
-      svg.appendChild(el("path", { d: path(sB), fill: "none", stroke: "var(--peer)", "stroke-width": "2" }));
+      const s0 = series[0].vals;
+      svg.appendChild(el("path", { d: pathFor(s0) + ` L ${xAt(s0.length - 1, s0.length)} ${BOT} L ${PADL} ${BOT} Z`, fill: "var(--acc)", "fill-opacity": "0.08", stroke: "none" }));
     }
-    svg.appendChild(el("path", { d: path(sA), fill: "none", stroke: "var(--acc)", "stroke-width": "2.2" }));
+    // Tegn peers under STB, STB øverst
+    series.slice(1).forEach((s) => svg.appendChild(el("path", { d: pathFor(s.vals), fill: "none", stroke: s.color, "stroke-width": s.width })));
+    svg.appendChild(el("path", { d: pathFor(series[0].vals), fill: "none", stroke: series[0].color, "stroke-width": series[0].width }));
 
     // hover
     const vline = el("line", { x1: 0, x2: 0, y1: TOP, y2: BOT, stroke: "var(--mut)", "stroke-width": "1", "stroke-dasharray": "3,3", opacity: "0" });
-    const dotA = el("circle", { r: 4, fill: "var(--acc)", opacity: "0" });
-    const dotB = el("circle", { r: 4, fill: "var(--peer)", opacity: "0" });
-    svg.appendChild(vline); svg.appendChild(dotA); svg.appendChild(dotB);
+    svg.appendChild(vline);
+    const dots = series.map((s) => { const c = el("circle", { r: 4, fill: s.color, opacity: "0" }); svg.appendChild(c); return c; });
     const overlay = el("rect", { x: PADL, y: TOP, width: XR - PADL, height: BOT - TOP, fill: "transparent", "pointer-events": "all" });
     svg.appendChild(overlay);
 
@@ -199,27 +202,25 @@ function renderPriceChart() {
       const t = evt.touches ? evt.touches[0] : evt;
       const pt = svg.createSVGPoint(); pt.x = t.clientX; pt.y = t.clientY;
       const ctm = svg.getScreenCTM(); if (!ctm) return;
-      const loc = pt.matrixTransform(ctm.inverse());
-      const f = Math.max(0, Math.min(1, (loc.x - PADL) / (XR - PADL)));
-      const iA = Math.round(f * (sA.length - 1));
-      const px = xA(iA, sA.length), py = y(sA[iA]);
+      const f = Math.max(0, Math.min(1, (pt.matrixTransform(ctm.inverse()).x - PADL) / (XR - PADL)));
+      const px = PADL + f * (XR - PADL);
       vline.setAttribute("x1", px); vline.setAttribute("x2", px); vline.setAttribute("opacity", "1");
-      dotA.setAttribute("cx", px); dotA.setAttribute("cy", py); dotA.setAttribute("opacity", "1");
-      let html = `<div class="t-date">${stb[iA][0]}</div><div style="color:var(--acc)">Storebrand: ${kr(stb[iA][1])}</div>`;
-      if (comparing) {
-        const iB = Math.round(f * (sB.length - 1));
-        dotB.setAttribute("cx", px); dotB.setAttribute("cy", y(sB[iB])); dotB.setAttribute("opacity", "1");
-        html += `<div style="color:var(--peer)">${PEER_SHORT[cmp]}: ${kr(comparing[iB][1])}</div>`;
-      } else { dotB.setAttribute("opacity", "0"); }
+      let html = `<div class="t-date">${stb[Math.round(f * (stb.length - 1))][0]}</div>`;
+      series.forEach((s, k) => {
+        const i = Math.round(f * (s.vals.length - 1));
+        dots[k].setAttribute("cx", xAt(i, s.vals.length)); dots[k].setAttribute("cy", y(s.vals[i])); dots[k].setAttribute("opacity", "1");
+        // I sammenligningsmodus: vis prosentendring siden periodestart. Ellers: kroner.
+        const label = comparing ? pct1(s.vals[i] - 100) : kr(s.raw[i][1]);
+        html += `<div style="color:${s.color}">${s.name}: ${label}</div>`;
+      });
       showTip(t, html);
     }
+    const clear = () => { vline.setAttribute("opacity", "0"); dots.forEach((d) => d.setAttribute("opacity", "0")); hideTip(); };
     overlay.addEventListener("mousemove", move);
-    overlay.addEventListener("mouseleave", () => { vline.setAttribute("opacity", "0"); dotA.setAttribute("opacity", "0"); dotB.setAttribute("opacity", "0"); hideTip(); });
+    overlay.addEventListener("mouseleave", clear);
     overlay.addEventListener("touchmove", move, { passive: true });
-    overlay.addEventListener("touchend", () => { vline.setAttribute("opacity", "0"); dotA.setAttribute("opacity", "0"); dotB.setAttribute("opacity", "0"); hideTip(); });
+    overlay.addEventListener("touchend", clear);
 
-    // perf + legend
-    const chg = ((sA[sA.length - 1] / (comparing ? 100 : sA[0])) - 1) * 100;
     const stbChg = ((stb[stb.length - 1][1] / stb[0][1]) - 1) * 100;
     const perfEl = document.getElementById("chart-perf");
     perfEl.textContent = pct1(stbChg);
@@ -227,11 +228,106 @@ function renderPriceChart() {
     const leg = document.getElementById("cmp-legend");
     if (comparing) {
       leg.hidden = false;
-      leg.innerHTML = `<span style="color:var(--acc)">— Storebrand</span><span style="color:var(--peer)">— ${PEER_SHORT[cmp]}</span><span style="color:var(--mut)">Indeksert, 100 = periodestart</span>`;
+      leg.innerHTML = series.map((s) => `<span style="color:${s.color}">— ${s.name}</span>`).join("") + `<span style="color:var(--mut)">Indeksert: 100 = periodestart, hover viser % endring</span>`;
     } else { leg.hidden = true; }
   }
   draw();
 }
+
+/* ---------- AI-ekspert: egen meningslinje ved siden av kursen ---------- */
+function renderAiExpert() {
+  const svg = document.getElementById("ai-chart");
+  const data = STB_PRICES.oneY;
+  const prices = data.map((d) => d[1]);
+  const n = prices.length;
+  const q = STB_DATA.quote, k = STB_DATA.kpis;
+
+  // AI-ekspertens "rettferdige verdi": glidende verdivurdering (trend) forankret mot analytikernes snittmål.
+  const win = Math.max(10, Math.round(n / 6));
+  const sma = prices.map((_, i) => {
+    const a = Math.max(0, i - win + 1), slice = prices.slice(a, i + 1);
+    return slice.reduce((s, v) => s + v, 0) / slice.length;
+  });
+  // Dra linja gradvis mot analytikernes snittmål mot slutten (ekspertens fremoverblikk).
+  const fair = sma.map((v, i) => {
+    if (!q.analystTarget) return v;
+    const w = (i / (n - 1)) * 0.35; // opp til 35 % vekt på slutten
+    return v * (1 - w) + q.analystTarget * w;
+  });
+
+  const PADL = 48, PADR = 16, TOP = 14, BOT = 268, XR = 800 - PADR;
+  let yMin = Math.min(...prices, ...fair), yMax = Math.max(...prices, ...fair);
+  const padY = (yMax - yMin) * 0.08 || 1; yMin -= padY; yMax += padY;
+  const X = (i) => PADL + (i / (n - 1)) * (XR - PADL);
+  const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
+
+  for (let s = 0; s <= 4; s++) {
+    const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v);
+    svg.appendChild(el("line", { x1: PADL, x2: XR, y1: yy, y2: yy, class: "chart-grid" }));
+    svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, nf0.format(v)));
+  }
+  [0, Math.floor(n / 2), n - 1].forEach((i) => {
+    svg.appendChild(el("text", { x: X(i), y: 288, "text-anchor": i === 0 ? "start" : i === n - 1 ? "end" : "middle", class: "chart-axis" }, data[i][0]));
+  });
+  const pathFor = (arr) => { let d = ""; arr.forEach((v, i) => { d += (i ? " L " : "M ") + X(i) + " " + Y(v); }); return d; };
+  svg.appendChild(el("path", { d: pathFor(fair), fill: "none", stroke: "var(--ai)", "stroke-width": "2", "stroke-dasharray": "6,4" }));
+  svg.appendChild(el("path", { d: pathFor(prices), fill: "none", stroke: "var(--acc)", "stroke-width": "2.2" }));
+
+  // hover
+  const vline = el("line", { x1: 0, x2: 0, y1: TOP, y2: BOT, stroke: "var(--mut)", "stroke-width": "1", "stroke-dasharray": "3,3", opacity: "0" });
+  const dP = el("circle", { r: 4, fill: "var(--acc)", opacity: "0" }), dF = el("circle", { r: 4, fill: "var(--ai)", opacity: "0" });
+  svg.appendChild(vline); svg.appendChild(dP); svg.appendChild(dF);
+  const overlay = el("rect", { x: PADL, y: TOP, width: XR - PADL, height: BOT - TOP, fill: "transparent", "pointer-events": "all" });
+  svg.appendChild(overlay);
+  const move = (evt) => {
+    const t = evt.touches ? evt.touches[0] : evt;
+    const pt = svg.createSVGPoint(); pt.x = t.clientX; pt.y = t.clientY;
+    const ctm = svg.getScreenCTM(); if (!ctm) return;
+    const f = Math.max(0, Math.min(1, (pt.matrixTransform(ctm.inverse()).x - PADL) / (XR - PADL)));
+    const i = Math.round(f * (n - 1)), px = X(i);
+    vline.setAttribute("x1", px); vline.setAttribute("x2", px); vline.setAttribute("opacity", "1");
+    dP.setAttribute("cx", px); dP.setAttribute("cy", Y(prices[i])); dP.setAttribute("opacity", "1");
+    dF.setAttribute("cx", px); dF.setAttribute("cy", Y(fair[i])); dF.setAttribute("opacity", "1");
+    showTip(t, `<div class="t-date">${data[i][0]}</div><div style="color:var(--acc)">Kurs: ${kr(prices[i])}</div><div style="color:var(--ai)">AI-estimat: ${kr(fair[i])}</div>`);
+  };
+  const clear = () => { vline.setAttribute("opacity", "0"); dP.setAttribute("opacity", "0"); dF.setAttribute("opacity", "0"); hideTip(); };
+  overlay.addEventListener("mousemove", move); overlay.addEventListener("mouseleave", clear);
+  overlay.addEventListener("touchmove", move, { passive: true }); overlay.addEventListener("touchend", clear);
+
+  // --- Ekspertens vurdering nå ---
+  const fairNow = fair[n - 1];
+  const gap = ((q.price - fairNow) / fairNow) * 100; // + = dyrere enn AI-estimat
+  const peerAvgPe = avg(STB_DATA.peers.filter((p) => !p.isSubject).map((p) => p.pe));
+  const peerAvgY = avg(STB_DATA.peers.filter((p) => !p.isSubject).map((p) => p.dividendYield));
+  const ret1y = oneYearRet(STB_PRICES.oneY);
+
+  let rating, ratingCls;
+  if (gap > 6) { rating = "Dyr priset"; ratingCls = "down"; }
+  else if (gap < -6) { rating = "Billig priset"; ratingCls = "up"; }
+  else { rating = "Rimelig priset"; ratingCls = "neutral"; }
+  document.getElementById("ai-badge").innerHTML = `<span class="ai-badge ${ratingCls}">AI-ekspert: ${rating}</span>`;
+
+  // Signaler
+  const signals = [
+    sig("Verdi vs. kurs", gap <= 0, `Kursen er ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-estimatet`),
+    sig("Kursmål", q.price <= q.analystTarget, `${nf1.format(Math.abs((q.price / q.analystTarget - 1) * 100))} % ${q.price <= q.analystTarget ? "opp til" : "over"} analytikernes mål`),
+    sig("P/E vs. bransjen", q.peTtm <= peerAvgPe, `P/E ${nf1.format(q.peTtm)} mot snitt ${nf1.format(peerAvgPe)}`),
+    sig("Utbytte vs. bransjen", q.dividendYield >= peerAvgY, `${nf1.format(q.dividendYield)} % mot snitt ${nf1.format(peerAvgY)} %`),
+    sig("Soliditet", k.solvency >= 175, `Solvens ${k.solvency} % ${k.solvency >= 175 ? "gir rom for tilbakekjøp" : ""}`),
+  ];
+  const sc = signals.filter((s) => s.good).length - signals.filter((s) => !s.good).length;
+  const chips = document.getElementById("ai-signals");
+  signals.forEach((s) => chips.appendChild(h(`<span class="ai-chip ${s.good ? "good" : "bad"}">${s.good ? "▲" : "▼"} ${s.label}<span class="ai-chip-sub">${s.detail}</span></span>`)));
+
+  // Ekspertens tekstlige mening – samkjørt med badge-vurderingen.
+  const fundament = sc >= 2 ? "trekker i positiv retning" : sc <= -2 ? "trekker i negativ retning" : "er blandet";
+  document.getElementById("ai-rationale").innerHTML =
+    `Etter en oppgang på ${pct1(ret1y)} det siste året handles Storebrand nå ${nf1.format(Math.abs(gap))} % ${gap >= 0 ? "over" : "under"} AI-ekspertens estimerte verdi på ${kr(fairNow, 0)}. ` +
+    `Verdsettelsen (P/E ${nf1.format(q.peTtm)}) er ${q.peTtm <= peerAvgPe ? "lavere" : "høyere"} enn snittet for lignende selskaper (${nf1.format(peerAvgPe)}), direkteavkastningen er ${nf1.format(q.dividendYield)} %, og solvensmarginen på ${k.solvency} % ${k.solvency >= 175 ? "gir rom for fortsatte tilbakekjøp" : "er solid"}. ` +
+    `AI-ekspertens konklusjon: aksjen ser <strong>${rating.toLowerCase()}</strong> ut mot sin egen verdibane, mens verdsettelse og soliditet ${fundament}.`;
+}
+const avg = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+const sig = (label, good, detail) => ({ label, good, detail });
 
 /* ---------- 52-ukers meter ---------- */
 function renderRangeMeter() {
@@ -360,8 +456,12 @@ function renderComparison() {
   });
   const tb = document.getElementById("cmp-table-body");
   peers.forEach((p) => {
-    const yr = p.oneYearPct == null ? "–" : pct1(p.oneYearPct);
-    const yrCol = p.oneYearPct == null ? "var(--mut)" : p.oneYearPct >= 0 ? "var(--up)" : "var(--down)";
+    // 1-års avkastning fra samme daglige serie som resten av siden (samkjørt).
+    const series = p.isSubject ? STB_PRICES.oneY : (STB_PEER_PRICES[p.ticker] && STB_PEER_PRICES[p.ticker].oneY);
+    const ret = oneYearRet(series);
+    const val = ret == null ? p.oneYearPct : ret;
+    const yr = val == null ? "–" : pct1(val);
+    const yrCol = val == null ? "var(--mut)" : val >= 0 ? "var(--up)" : "var(--down)";
     tb.appendChild(h(`<tr class="${p.isSubject ? "subject" : ""}"><td style="font-weight:${p.isSubject ? 700 : 400}">${p.name}</td><td class="num">${nf1.format(p.price)} ${p.currency}</td><td class="num" style="color:var(--mut)">${nf0.format(p.marketCap)} mrd</td><td class="num">${nf1.format(p.pe)}</td><td class="num">${nf1.format(p.dividendYield)} %</td><td class="num" style="color:${yrCol}">${yr}</td></tr>`));
   });
 }
@@ -388,6 +488,7 @@ renderHeader();
 renderStats();
 renderPriceChart();
 renderRangeMeter();
+renderAiExpert();
 renderCompany();
 renderDividends();
 renderKeyFigures();

@@ -13,6 +13,7 @@
   --up: #3ecf8e;
   --down: #f07171;
   --peer: #6ea8dc;
+  --ai: #b48ce8;
 }
 body.light {
   --bg: #f3f4f6;
@@ -25,6 +26,7 @@ body.light {
   --up: #137a4b;
   --down: #bd3535;
   --peer: #2f6494;
+  --ai: #7a4fc0;
 }
 
 * { box-sizing: border-box; }
@@ -312,6 +314,34 @@ tr.subject td { font-weight: 700; }
   padding: 4px 12px;
 }
 a.src-pill:hover { color: var(--tx); border-color: var(--acc); text-decoration: none; }
+
+/* AI-ekspert */
+.ai-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--ai);
+  color: var(--ai);
+}
+.ai-badge.up { color: var(--up); border-color: var(--up); }
+.ai-badge.down { color: var(--down); border-color: var(--down); }
+.ai-badge.neutral { color: var(--acc); border-color: var(--acc); }
+.ai-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ai-chip.good { border-left: 3px solid var(--up); }
+.ai-chip.bad { border-left: 3px solid var(--down); }
+.ai-chip-sub { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 400; color: var(--mut); }
 
 /* Stale banner */
 .stale-banner {
