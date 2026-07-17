@@ -38,6 +38,15 @@ const STB_INSIDERS = {
       "role": "Konsernledelse m.fl.",
       "date": "2026-05-12",
       "url": "https://newsweb.oslobors.no/message/673256"
+    },
+    {
+      "type": "Kjøp",
+      "shares": 650,
+      "price": 157,
+      "name": "Janne Flessum",
+      "role": "Styremedlem",
+      "date": "2025-10-22",
+      "url": "https://newsweb.oslobors.no/message/657688"
     }
   ]
 };

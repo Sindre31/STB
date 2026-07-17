@@ -110,7 +110,7 @@ const nwTitle = (m) => m.title.replace(/^STOREBRAND ASA:\s*/i, "").trim();
 async function fetchStbMessages() {
   const day = 86400000, iso = (t) => new Date(t).toISOString().slice(0, 10);
   const byId = new Map();
-  for (let c = 0; c < 8; c++) {
+  for (let c = 0; c < 14; c++) {
     const to = Date.now() + day - c * 22 * day, from = to - 23 * day;
     const url = `https://api3.oslo.oslobors.no/v1/newsreader/list?fromDate=${iso(from)}&toDate=${iso(to)}`;
     const res = await fetch(url, { headers: { "User-Agent": UA } });
@@ -168,13 +168,27 @@ function parseInsider(raw) {
 }
 
 // Bygg innsidetabell fra meldepliktig-handel-meldinger (norsk versjon), nyeste først.
+// Tolk gjennomførte tilbakekjøp (dato, antall, verdi) fra status-meldingenes transaksjonstabell.
+function parseBuybacks(body) {
+  const n = body.replace(/ /g, " ");
+  const rows = [...n.matchAll(/(\d{2}\.\d{2}\.\d{4})\s+([\d ]+?)\s+(\d+,\d+)\s+([\d ]+\d)/g)];
+  return rows.map((r) => ({ date: r[1], shares: parseInt(r[2].replace(/ /g, ""), 10), value: parseInt(r[4].replace(/ /g, ""), 10) })).filter((x) => x.shares > 0 && x.value > 0);
+}
+async function buildBuybacks(stb) {
+  const cand = stb.filter((m) => /tilbakekj/i.test(m.title)).slice(0, 30);
+  const byDate = new Map();
+  for (const m of cand) { for (const t of parseBuybacks(await fetchMessageBody(m.messageId))) byDate.set(t.date, t); }
+  const toIso = (d) => { const p = d.split("."); return `${p[2]}-${p[1]}-${p[0]}`; };
+  return [...byDate.values()].map((t) => ({ ...t, iso: toIso(t.date) })).sort((a, b) => (a.iso < b.iso ? 1 : -1)).slice(0, 120);
+}
+
 async function buildInsiders(stb) {
-  const cand = stb.filter((m) => m.category?.[0]?.id === 1102 && /meldepliktig/i.test(m.title)).slice(0, 12);
+  const cand = stb.filter((m) => m.category?.[0]?.id === 1102 && /meldepliktig/i.test(m.title)).slice(0, 40);
   const out = [];
   for (const m of cand) {
     const tx = parseInsider(await fetchMessageBody(m.messageId));
     if (tx) out.push({ ...tx, date: m.publishedTime.slice(0, 10), url: `https://newsweb.oslobors.no/message/${m.messageId}` });
-    if (out.length >= 6) break;
+    if (out.length >= 25) break;
   }
   return out;
 }
@@ -269,20 +283,23 @@ async function main() {
     if (Object.keys(entry).length) peers[p.ticker] = entry;
   });
 
-  // ---- Peer-kursserier (for indeksert sammenligningsgraf) ----
+  // ---- Peer-kursserier (for indeksert sammenligningsgraf) + Oslo Børs-indeksen ----
   const peerSeries = {};
   for (const p of PEERS) {
     if (p.ticker === "STB.OL") continue;
     const s = await seriesForTicker(p.ticker).catch(() => null);
     if (s && s.oneY.length) peerSeries[p.ticker] = s;
   }
+  const osebx = await seriesForTicker("OSEBX.OL").catch(() => null);
+  if (osebx && osebx.oneY.length) peerSeries["OSEBX.OL"] = osebx;
 
   // ---- Børsmeldinger + innsidehandel fra NewsWeb (best effort – egne filer, feiler stille) ----
-  let newsFeed = [], insiders = [];
+  let newsFeed = [], insiders = [], buybacks = [];
   try {
     const msgs = await fetchStbMessages();
     newsFeed = buildFeed(msgs);
     insiders = await buildInsiders(msgs);
+    buybacks = await buildBuybacks(msgs);
   } catch (e) { console.warn("NewsWeb feilet, hopper over børsmeldinger/innsidehandel:", e.message); }
 
   const updated = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
@@ -318,6 +335,14 @@ async function main() {
       "// AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd. Faller tilbake på data.js hvis fraværende.\n" +
       "const STB_INSIDERS = " + JSON.stringify({ updated, transactions: insiders }, null, 2) + ";\n";
     writeFileSync(join(ROOT, "js", "insiders.js"), insJs);
+  }
+
+  if (buybacks.length) {
+    const bbJs =
+      "// Gjennomførte tilbakekjøp av egne aksjer (dato, antall, verdi) tolket fra Oslo Børs NewsWeb.\n" +
+      "// AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.\n" +
+      "const STB_BUYBACKS = " + JSON.stringify({ updated, transactions: buybacks }) + ";\n";
+    writeFileSync(join(ROOT, "js", "buybacks.js"), bbJs);
   }
 
   // Analytiker-måltidsserie (vokser dag for dag).

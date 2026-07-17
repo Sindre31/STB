@@ -167,8 +167,8 @@ function renderStats() {
 
 /* ---------- Prisgraf med periode + peer-sammenligning ---------- */
 const PERIODS = [["1u", "1 uke"], ["1m", "1 mnd"], ["3m", "3 mnd"], ["oneY", "1 år"], ["fiveY", "5 år"], ["max", "Maks"]];
-const PEER_SHORT = { "GJF.OL": "Gjensidige", "PROT.OL": "Protector", "TRYG.CO": "Tryg", "SAMPO.HE": "Sampo" };
-const PEER_COLORS = { "GJF.OL": "#6ea8dc", "PROT.OL": "#3ecf8e", "TRYG.CO": "#c58af0", "SAMPO.HE": "#e8975a" };
+const PEER_SHORT = { "GJF.OL": "Gjensidige", "PROT.OL": "Protector", "TRYG.CO": "Tryg", "SAMPO.HE": "Sampo", "OSEBX.OL": "Oslo Børs" };
+const PEER_COLORS = { "GJF.OL": "#6ea8dc", "PROT.OL": "#3ecf8e", "TRYG.CO": "#c58af0", "SAMPO.HE": "#e8975a", "OSEBX.OL": "#d98b8b" };
 const MND = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"];
 // 1-års avkastning beregnet fra daglig serie – samme metode for STB og alle peers.
 const oneYearRet = (series) => (series && series.length > 1 ? ((series[series.length - 1][1] / series[0][1]) - 1) * 100 : null);
@@ -712,6 +712,25 @@ function renderNewsFeed() {
   });
 }
 
+const insiderIsoDate = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : s);
+function insiderRow(t) {
+  const val = t.shares != null ? nf0.format(t.shares * t.price) : "–";
+  const sharesC = t.shares != null ? nf0.format(t.shares) : "flere";
+  const typeCell = t.type === "Kjøp" ? '<span class="tag-buy">KJØP</span>' : t.type === "Salg" ? '<span class="tag-sell">SALG</span>' : t.type;
+  const nameC = t.url ? `<a href="${t.url}" target="_blank" rel="noopener" class="linkish">${t.name}</a>` : t.name;
+  const roleSub = t.role ? `<div style="font-size:11px;color:var(--mut)">${t.role}</div>` : "";
+  return h(`<tr><td class="mono" style="color:var(--mut)">${insiderIsoDate(t.date)}</td><td>${nameC}${roleSub}</td><td>${typeCell}</td><td class="num">${sharesC}</td><td class="num">${nf0.format(t.price)}</td><td class="num">${val}</td></tr>`);
+}
+function showInsiderTable(txs) {
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">Alle meldepliktige handler hentet fra Oslo Børs NewsWeb (${txs.length} transaksjoner). Klikk et navn for å åpne meldingen.</div>`));
+  const scroll = h(`<div class="table-scroll"><table><thead><tr><th>Dato</th><th>Person / rolle</th><th>Type</th><th class="num">Antall</th><th class="num">Kurs</th><th class="num">Verdi (kr)</th></tr></thead><tbody></tbody></table></div>`);
+  const tb = scroll.querySelector("tbody");
+  txs.forEach((t) => tb.appendChild(insiderRow(t)));
+  wrap.appendChild(scroll);
+  openModal("Alle innsidehandler", wrap);
+}
+
 /* ---------- Innsidehandel / tilbakekjøp / eierstruktur ---------- */
 function renderInsiders() {
   const d = STB_DATA.insiders;
@@ -723,16 +742,14 @@ function renderInsiders() {
   // Bruk ferske API-tolkede transaksjoner hvis de finnes, ellers kuratert fallback.
   const live = typeof STB_INSIDERS !== "undefined" && STB_INSIDERS.transactions && STB_INSIDERS.transactions.length;
   const txs = live ? STB_INSIDERS.transactions : d.transactions;
-  const isoDate = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : s);
   const tb = document.getElementById("insider-table-body");
-  txs.forEach((t) => {
-    const val = t.shares != null ? nf0.format(t.shares * t.price) : "–";
-    const sharesC = t.shares != null ? nf0.format(t.shares) : "flere";
-    const typeCell = t.type === "Kjøp" ? '<span class="tag-buy">KJØP</span>' : t.type === "Salg" ? '<span class="tag-sell">SALG</span>' : t.type;
-    const nameC = t.url ? `<a href="${t.url}" target="_blank" rel="noopener" class="linkish">${t.name}</a>` : t.name;
-    const roleSub = t.role ? `<div style="font-size:11px;color:var(--mut)">${t.role}</div>` : "";
-    tb.appendChild(h(`<tr><td class="mono" style="color:var(--mut)">${isoDate(t.date)}</td><td>${nameC}${roleSub}</td><td>${typeCell}</td><td class="num">${sharesC}</td><td class="num">${nf0.format(t.price)}</td><td class="num">${val}</td></tr>`));
-  });
+  txs.slice(0, 6).forEach((t) => tb.appendChild(insiderRow(t)));
+  if (txs.length) {
+    const label = txs.length > 6 ? `Se alle ${txs.length} innsidehandler ▸` : "Åpne full innsidehandel-tabell ▸";
+    const link = h(`<button class="ghost-btn" id="insider-more" style="margin-top:10px;">${label}</button>`);
+    link.addEventListener("click", () => showInsiderTable(txs));
+    document.getElementById("insider-source").appendChild(link);
+  }
   if (live) {
     document.getElementById("insider-lead").textContent =
       "Meldepliktige handler for primærinnsidere, hentet automatisk fra Oslo Børs NewsWeb og oppdatert løpende. Innsidere har i hovedsak vært nettokjøpere — ofte tolket positivt, men ingen garanti for kursutvikling.";
@@ -827,6 +844,46 @@ function historyChartSVG(points, fmt, color) {
   }
   return svg;
 }
+// Tidsbasert flerlinje-graf (P/E- eller yield-sammenligning mot peers).
+function multiLineTimeChart(seriesList, fmt) {
+  const W = 620, H = 300, PADL = 50, PADR = 84, TOP = 16, BOT = 244;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart-svg" });
+  const allPts = seriesList.flatMap((s) => s.points), ts = allPts.map((p) => Date.parse(p[0]));
+  const tMin = Math.min(...ts), tMax = Math.max(...ts), vals = allPts.map((p) => p[1]);
+  let yMin = Math.min(...vals), yMax = Math.max(...vals); const padY = (yMax - yMin) * 0.1 || 1; yMin = Math.max(0, yMin - padY); yMax += padY;
+  const X = (t) => PADL + (t - tMin) / (tMax - tMin) * (W - PADR - PADL);
+  const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
+  for (let s = 0; s <= 4; s++) { const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v); svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: yy, y2: yy, class: "chart-grid" })); svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, fmt(v))); }
+  [tMin, (tMin + tMax) / 2, tMax].forEach((t, i) => { const d = new Date(t); svg.appendChild(el("text", { x: X(t), y: BOT + 18, "text-anchor": i === 0 ? "start" : i === 2 ? "end" : "middle", class: "chart-axis" }, MND[d.getUTCMonth()] + " " + String(d.getUTCFullYear()).slice(2))); });
+  seriesList.forEach((s) => {
+    let d = ""; s.points.forEach((p, i) => (d += (i ? " L " : "M ") + X(Date.parse(p[0])) + " " + Y(p[1])));
+    svg.appendChild(el("path", { d, fill: "none", stroke: s.color, "stroke-width": s.width || 2 }));
+    const last = s.points[s.points.length - 1];
+    svg.appendChild(el("text", { x: W - PADR + 4, y: Y(last[1]) + 4, class: "chart-axis", fill: s.color }, s.name.split(" ")[0]));
+  });
+  return svg;
+}
+// Bygg P/E- eller yield-serier siste år for STB + peers (forenklet: antar uendret inntjening/utbytte).
+function peerRatioSeries(mode) {
+  const out = [], q = STB_DATA.quote;
+  const add = (name, color, ps, curRatio, curPrice, width) => {
+    if (!ps || !ps.length || !curRatio || !curPrice) return;
+    out.push({ name, color, width, points: ps.map((d) => [d[0], mode === "pe" ? curRatio * d[1] / curPrice : curRatio * curPrice / d[1]]) });
+  };
+  add("Storebrand", "var(--acc)", STB_PRICES.oneY, mode === "pe" ? q.peTtm : q.dividendYield, q.price, 2.6);
+  STB_DATA.peers.filter((p) => !p.isSubject).forEach((p) => {
+    const ps = STB_PEER_PRICES[p.ticker] && STB_PEER_PRICES[p.ticker].oneY;
+    add(p.name, PEER_COLORS[p.ticker] || "var(--mut)", ps, mode === "pe" ? p.pe : p.dividendYield, p.price);
+  });
+  return out;
+}
+function appendPeerComparison(wrap, mode) {
+  const cmp = peerRatioSeries(mode);
+  if (cmp.length < 2) return;
+  wrap.appendChild(h(`<div class="method-h" style="margin-top:20px;">${mode === "pe" ? "P/E" : "Direkteavkastning"} siste år vs. bransjen (forenklet)</div>`));
+  wrap.appendChild(h(`<p class="ntext" style="color:var(--mut);margin:-2px 0 6px">Forenklet: antar uendret ${mode === "pe" ? "inntjening" : "utbytte"}, så linjene viser hvordan ${mode === "pe" ? "verdsettelsen" : "direkteavkastningen"} har beveget seg med kursen det siste året.</p>`));
+  wrap.appendChild(multiLineTimeChart(cmp, mode === "pe" ? (v) => nf1.format(v) : (v) => nf1.format(v) + " %"));
+}
 function showPeHistory() {
   const q = STB_DATA.quote;
   const pts = STB_DATA.financialsHistory
@@ -837,6 +894,7 @@ function showPeHistory() {
   wrap.appendChild(h(`<div class="modal-sub">P/E = kurs delt på resultat per aksje. Historiske punkter bruker årsslutt-kurs og selskapets rapporterte årlige EPS; «Nå» bruker dagens kurs og resultat siste 12 mnd.</div>`));
   wrap.appendChild(historyChartSVG(pts, (v) => nf1.format(v), "var(--acc)"));
   wrap.appendChild(h(`<p class="ntext" style="margin-top:14px;color:var(--mut)">Årlig EPS: ${STB_DATA.financialsHistory.map((f) => f.year + " " + nf2.format(f.eps) + " kr").join(" · ")} · nå ${nf2.format(q.epsTtm)} kr.</p>`));
+  appendPeerComparison(wrap, "pe");
   openModal("P/E-utvikling", wrap);
 }
 function showYieldHistory() {
@@ -847,6 +905,7 @@ function showYieldHistory() {
   const wrap = document.createElement("div");
   wrap.appendChild(h(`<div class="modal-sub">Direkteavkastning = utbytte delt på kurs. Beregnet som utbyttet betalt i året delt på årsslutt-kursen (siste år mot dagens kurs). 2020 var utbyttet kuttet til null.</div>`));
   wrap.appendChild(historyChartSVG(pts, (v) => nf1.format(v) + " %", "var(--peer)"));
+  appendPeerComparison(wrap, "yield");
   openModal("Direkteavkastning over tid", wrap);
 }
 function showMarketCapHistory() {
@@ -912,7 +971,21 @@ function showBuybackHistory() {
   const bb = STB_DATA.insiders.buyback, sched = bb.schedule || [];
   const maxA = Math.max(...sched.map((s) => s.amount));
   const wrap = document.createElement("div");
-  wrap.appendChild(h(`<div class="modal-sub">Tilbakekjøp av egne aksjer (mrd. kr). 2026 er annonsert program; 2027–2030 er en prediksjon fra selskapets uttalte policy om minst 1,5 mrd/år. Tilbakekjøp reduserer antall aksjer og løfter normalt resultat per aksje.</div>`));
+  wrap.appendChild(h(`<div class="modal-sub">Tilbakekjøp av egne aksjer. Øverst: faktisk gjennomførte tilbakekjøp per måned (fra Oslo Børs-meldinger). Nederst: annonsert program 2026 og prediksjon 2027–2030 fra selskapets policy. Tilbakekjøp reduserer antall aksjer og løfter normalt resultat per aksje.</div>`));
+
+  // C3: faktisk gjennomførte tilbakekjøp, aggregert per måned (mill. kr).
+  if (typeof STB_BUYBACKS !== "undefined" && STB_BUYBACKS.transactions && STB_BUYBACKS.transactions.length) {
+    const txs = STB_BUYBACKS.transactions;
+    const byMonth = new Map();
+    txs.forEach((t) => { const key = t.iso.slice(0, 7); byMonth.set(key, (byMonth.get(key) || 0) + t.value); });
+    const months = [...byMonth.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+    const totVal = txs.reduce((a, t) => a + t.value, 0), totSh = txs.reduce((a, t) => a + t.shares, 0);
+    wrap.appendChild(h(`<div class="method-h">Gjennomført (siste meldinger)</div>`));
+    const pts = months.map(([m, v]) => { const p = m.split("-"); return [`${MND[+p[1] - 1]} ${p[0].slice(2)}`, v / 1e6]; });
+    wrap.appendChild(historyChartSVG(pts, (v) => nf0.format(v), "var(--up)"));
+    wrap.appendChild(h(`<p class="ntext" style="margin-top:8px;color:var(--mut)">Sum i perioden: <strong style="color:var(--tx)">${nf0.format(totVal / 1e6)} mill. kr</strong> for ${nf0.format(totSh)} aksjer, over ${txs.length} handledager. Verdi per måned i mill. kr.</p>`));
+    wrap.appendChild(h(`<div class="method-h" style="margin-top:20px;">Program og plan (mrd. kr)</div>`));
+  }
   sched.forEach((s) => {
     const w = (s.amount / maxA) * 100;
     const col = s.kind === "predicted" ? "var(--mut)" : "var(--acc)";
@@ -938,39 +1011,52 @@ function showOwnershipHistory() {
 }
 
 function showAnalystTargets() {
-  const q = STB_DATA.quote, price = q.price;
-  const parseNo = (d) => { const p = d.split("."); return Date.parse(`${p[2]}-${p[1]}-${p[0]}`); };
-  const pts = (STB_DATA.analystTargets?.list || []).filter((a) => a.target).map((a) => ({ firm: a.firm, target: a.target, t: parseNo(a.date), buy: /kjøp/i.test(a.rating) }));
+  const q = STB_DATA.quote, price = q.price, con = analystConsensus();
+  const pts = con.listed.filter((a) => a.target).map((a) => ({ firm: a.firm, target: a.target, t: a.t, buy: /kjøp/i.test(a.rating), fresh: a.fresh }));
   const th = (typeof STB_TARGET_HISTORY !== "undefined" && STB_TARGET_HISTORY.points) ? STB_TARGET_HISTORY.points.map((p) => ({ t: Date.parse(p.date), mean: p.mean })) : [];
   const wrap = document.createElement("div");
-  wrap.appendChild(h(`<div class="modal-sub">Hvert meglerhus sitt siste kursmål plottet på datoen det ble satt (fargelagt etter anbefaling), mot dagens kurs og konsensus. Meglerhus oppdaterer mål sjelden, så per-hus er ett punkt hver; konsensuslinja bygges opp dag for dag fremover.</div>`));
+  wrap.appendChild(h(`<div class="modal-sub">Hvert meglerhus sitt siste kursmål plottet på datoen det ble satt (fargelagt etter anbefaling), mot dagens kurs og konsensus. Blasse prikker er mål satt før siste kvartalsrapport (utdaterte, teller ikke i konsensus).</div>`));
   const W = 620, H = 320, PADL = 46, PADR = 96, TOP = 18, BOT = 250;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart-svg" });
   const allT = [...pts.map((p) => p.t), ...th.map((m) => m.t), Date.now()];
   const tMin = Math.min(...allT), tMax = Math.max(...allT) + 3 * 86400000;
-  const allY = [...pts.map((p) => p.target), price, q.analystHigh, q.analystLow].filter((v) => v != null);
+  const allY = [...pts.map((p) => p.target), price, con.high, con.low].filter((v) => v != null);
   let yMin = Math.min(...allY), yMax = Math.max(...allY); const padY = (yMax - yMin) * 0.12 || 10; yMin -= padY; yMax += padY;
   const X = (t) => (tMax === tMin ? PADL + (W - PADR - PADL) / 2 : PADL + (t - tMin) / (tMax - tMin) * (W - PADR - PADL));
   const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
   for (let s = 0; s <= 4; s++) { const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v); svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: yy, y2: yy, class: "chart-grid" })); svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, nf0.format(v))); }
   [tMin, tMax].forEach((t, i) => { const d = new Date(t); svg.appendChild(el("text", { x: X(t), y: BOT + 20, "text-anchor": i === 0 ? "start" : "end", class: "chart-axis" }, MND[d.getUTCMonth()] + " " + String(d.getUTCFullYear()).slice(2))); });
   const hline = (v, col, label) => { if (v == null) return; svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: Y(v), y2: Y(v), stroke: col, "stroke-width": 1, "stroke-dasharray": "4,3" })); svg.appendChild(el("text", { x: W - PADR + 5, y: Y(v) + 4, class: "chart-axis", fill: col }, `${label} ${nf0.format(v)}`)); };
-  hline(q.analystHigh, "var(--mut)", "Høy");
-  hline(q.analystLow, "var(--mut)", "Lav");
+  hline(con.high, "var(--mut)", "Høy");
+  hline(con.low, "var(--mut)", "Lav");
   hline(price, "var(--tx)", "Kurs");
   if (th.length > 1) { let d = ""; th.forEach((m, i) => (d += (i ? " L " : "M ") + X(m.t) + " " + Y(m.mean))); svg.appendChild(el("path", { d, fill: "none", stroke: "var(--peer)", "stroke-width": 2 })); }
-  hline(q.analystTarget, "var(--peer)", "Snitt");
-  pts.forEach((p) => { const c = p.buy ? "var(--up)" : "var(--down)"; svg.appendChild(el("circle", { cx: X(p.t), cy: Y(p.target), r: 4.5, fill: c })); });
+  hline(con.mean, "var(--peer)", "Snitt");
+  pts.forEach((p) => { const c = p.buy ? "var(--up)" : "var(--down)"; svg.appendChild(el("circle", { cx: X(p.t), cy: Y(p.target), r: 4.5, fill: c, opacity: p.fresh ? "1" : "0.35" })); });
   wrap.appendChild(svg);
   wrap.appendChild(h(`<div class="pop-legend"><span><span style="color:var(--up)">●</span> Kjøp</span><span><span style="color:var(--down)">●</span> Undervekt/negativ</span><span><span style="color:var(--peer)">—</span> Konsensus (snitt)</span></div>`));
-  wrap.appendChild(h(`<p class="ntext" style="margin-top:10px;color:var(--mut)">Kilde: MarketScreener (per-hus, øyeblikksbilde) og Yahoo Finance (konsensus, akkumuleres). Full tabell med hvem som har hvilket mål står under grafen på siden.</p>`));
+  wrap.appendChild(h(`<p class="ntext" style="margin-top:10px;color:var(--mut)">Konsensus regnes fra ${con.source === "fresh" ? con.count + " ferske mål (etter siste kvartalsrapport)" : "Yahoo Finance"}. Full tabell med hvem som har hvilket mål står under grafen på siden.</p>`));
   openModal("Analytikernes kursmål over tid", wrap);
 }
 
 /* ---------- Analytikernes kursmål ---------- */
+const parseNoDate = (d) => { const p = d.split("."); return Date.parse(`${p[2]}-${p[1]}-${p[0]}`); };
+function analystConsensus() {
+  // C1: konsensus beregnes kun fra mål oppdatert etter siste kvartalsrapport (ferske).
+  const at = STB_DATA.analystTargets || {}, q = STB_DATA.quote;
+  const qd = at.quarterDate ? Date.parse(at.quarterDate) : 0;
+  const listed = (at.list || []).map((a) => ({ ...a, t: parseNoDate(a.date), fresh: parseNoDate(a.date) >= qd }));
+  const fresh = listed.filter((a) => a.fresh && a.target);
+  if (fresh.length >= 3) {
+    const tg = fresh.map((a) => a.target);
+    return { listed, mean: avg(tg), high: Math.max(...tg), low: Math.min(...tg), count: fresh.length, source: "fresh" };
+  }
+  return { listed, mean: q.analystTarget, high: q.analystHigh, low: q.analystLow, count: q.analystCount, source: "yahoo" };
+}
 function renderAnalysts() {
   const q = STB_DATA.quote;
-  const low = q.analystLow, high = q.analystHigh, mean = q.analystTarget, price = q.price;
+  const con = analystConsensus();
+  const low = con.low, high = con.high, mean = con.mean, price = q.price;
   const lo = Math.min(low, price) * 0.98, hi = Math.max(high, price) * 1.02;
   const pos = (v) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
   const m = document.getElementById("analyst-meter");
@@ -990,23 +1076,25 @@ function renderAnalysts() {
   ];
   const tb = document.getElementById("analyst-table-body");
   rows.forEach(([label, val, up]) => tb.appendChild(h(`<tr><td>${label}</td><td class="num">${nf0.format(val)}</td><td class="num">${up}</td></tr>`)));
-  document.getElementById("analyst-note").innerHTML =
-    `Konsensus er <strong>${q.analystRating || "–"}</strong> basert på ${q.analystCount || "flere"} analytikere. ` +
-    `Gjennomsnittsmålet ligger ${pct1((mean / price - 1) * 100)} mot dagens kurs på ${kr(price, 0)}. ` +
-    `Kilde: Yahoo Finance (oppdateres automatisk).`;
+  const conTxt = con.source === "fresh"
+    ? `Konsensus beregnet fra <strong>${con.count}</strong> kursmål oppdatert etter siste kvartalsrapport (${nf0.format(con.low)}–${nf0.format(con.high)} kr). Eldre mål er markert og holdt utenfor. Snittet ligger ${pct1((mean / price - 1) * 100)} mot dagens kurs på ${kr(price, 0)}.`
+    : `Konsensus er <strong>${q.analystRating || "–"}</strong> basert på ${q.analystCount || "flere"} analytikere. Snittet ligger ${pct1((mean / price - 1) * 100)} mot dagens kurs på ${kr(price, 0)}. Kilde: Yahoo Finance.`;
+  document.getElementById("analyst-note").innerHTML = conTxt;
 
-  // Enkeltmeglerhus (datert øyeblikksbilde)
+  // Enkeltmeglerhus (datert øyeblikksbilde) – utdaterte (før kvartalsrapport) markeres.
   const at = STB_DATA.analystTargets;
   if (at && at.list) {
     document.getElementById("analyst-firms-sub").textContent =
-      `Kursmål per meglerhus – øyeblikksbilde ${at.asOf} (${at.source}). Denne listen oppdateres manuelt, ikke automatisk som konsensustallene over.`;
+      `Kursmål per meglerhus – øyeblikksbilde ${at.asOf} (${at.source}). Mål satt før siste kvartalsrapport er merket «utdatert» og teller ikke i konsensus.`;
     const posC = { "Kjøp": "var(--up)", "Undervekt": "var(--down)", "Underperform": "var(--down)", "Hold": "var(--mut)", "Selg": "var(--down)" };
     const fb = document.getElementById("analyst-firms-body");
-    at.list.forEach((a) => {
+    con.listed.forEach((a) => {
       const up = a.target ? (a.target / price - 1) * 100 : null;
       const upCell = up == null ? "–" : `<span style="color:${up >= 0 ? "var(--up)" : "var(--down)"}">${pct1(up)}</span>`;
       const tgt = a.target ? nf0.format(a.target) : "–";
-      fb.appendChild(h(`<tr><td>${a.firm}</td><td><span style="color:${posC[a.rating] || "var(--tx)"}">${a.rating}</span></td><td class="num">${tgt}</td><td class="num">${upCell}</td><td class="num" style="color:var(--mut)">${a.date}</td></tr>`));
+      const stale = !a.fresh;
+      const staleTag = stale ? ' <span class="stale-tag">utdatert</span>' : "";
+      fb.appendChild(h(`<tr style="${stale ? "opacity:.5;" : ""}"><td>${a.firm}${staleTag}</td><td><span style="color:${posC[a.rating] || "var(--tx)"}">${a.rating}</span></td><td class="num">${tgt}</td><td class="num">${upCell}</td><td class="num" style="color:var(--mut)">${a.date}</td></tr>`));
     });
   }
 }

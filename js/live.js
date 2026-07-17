@@ -64,12 +64,12 @@ const STB_LIVE = {
       "oneYearPct": -2.6
     },
     "SAMPO.HE": {
-      "pe": 15.81,
+      "pe": 15.9,
       "dividendYield": 3.77,
-      "marketCap": 25.46,
-      "priceToBook": 3.12,
-      "price": 9.65,
-      "oneYearPct": 2
+      "marketCap": 25.59,
+      "priceToBook": 3.14,
+      "price": 9.7,
+      "oneYearPct": 2.5
     }
   }
 };

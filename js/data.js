@@ -117,6 +117,8 @@ const STB_DATA = {
   analystTargets: {
     asOf: "juli 2026",
     source: "MarketScreener",
+    quarterDate: "2026-07-15", // siste kvartalsrapport – mål eldre enn dette regnes som utdaterte
+
     list: [
       { firm: "Nordea", rating: "Kjøp", target: 218, date: "16.07.2026" },
       { firm: "SEB", rating: "Kjøp", target: 218, date: "16.07.2026" },
