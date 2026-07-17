@@ -93,10 +93,10 @@ const NW_ISSUER = 1955;
 const isEnglishTitle = (t) => /\b(the|of|results|notice|transaction|invitation|reminder|buyback|announcement|quarter|proposal|completion|acquisition|minutes|resolutions|prospectus|voting|mandatory|managers|primary insider|financial calendar|contemplated)\b/i.test(t);
 const isNorwegianTitle = (t) => /[æøå]/i.test(t) || /\b(og|av|resultater|meldepliktig|primærinnsider|tilbakekjøp|påminnelse|innkalling|generalforsamling|flagging|forslag|kvartal|utbytte|igangsettelse|invitasjon|gjennomført|oppkjøp|børs|finanskalender|stemmerett|handel)\b/i.test(t);
 
-async function fetchNewsFeed() {
+const nwTitle = (m) => m.title.replace(/^STOREBRAND ASA:\s*/i, "").trim();
+// Hent alle STB-meldinger i et vindu bakover i tid (API-et kapper store spenn, så vi biter det opp).
+async function fetchStbMessages() {
   const day = 86400000, iso = (t) => new Date(t).toISOString().slice(0, 10);
-  // API-et kapper store spenn (returnerer bare de nyeste ~600 på tvers av alle utstedere),
-  // så vi henter i mindre biter bakover i tid og slår sammen for å få nok STB-meldinger.
   const byId = new Map();
   for (let c = 0; c < 8; c++) {
     const to = Date.now() + day - c * 22 * day, from = to - 23 * day;
@@ -107,26 +107,64 @@ async function fetchNewsFeed() {
       if (m.issuerId === NW_ISSUER && !m.test) byId.set(m.messageId, m);
     }
   }
-  const stb = [...byId.values()].sort((a, b) => (a.publishedTime < b.publishedTime ? 1 : -1));
-  const clean = (m) => m.title.replace(/^STOREBRAND ASA:\s*/i, "").trim();
-  // Norsk-score: æøå = 2, norsk ord = 1, engelsk ord = -1. NewsWeb publiserer norsk+engelsk som par
-  // under 1 sek fra hverandre; vi grupperer meldinger innen 2 sek og beholder den mest norske.
+  return [...byId.values()].sort((a, b) => (a.publishedTime < b.publishedTime ? 1 : -1));
+}
+
+// Feed: norsk+engelsk publiseres som par under 1 sek fra hverandre; behold den mest norske.
+function buildFeed(stb) {
   const score = (t) => (/[æøå]/i.test(t) ? 2 : 0) + (isNorwegianTitle(t) ? 1 : 0) - (isEnglishTitle(t) ? 1 : 0);
   const used = new Set(), kept = [];
   for (const m of stb) {
     if (used.has(m.messageId)) continue;
     const group = stb.filter((o) => !used.has(o.messageId) && Math.abs(Date.parse(o.publishedTime) - Date.parse(m.publishedTime)) < 2000);
-    const best = group.reduce((a, b) => (score(clean(b)) > score(clean(a)) ? b : a));
+    const best = group.reduce((a, b) => (score(nwTitle(b)) > score(nwTitle(a)) ? b : a));
     group.forEach((o) => used.add(o.messageId));
-    kept.push({
-      title: clean(best),
-      date: best.publishedTime.slice(0, 10),
-      category: best.category?.[0]?.category_no || "",
-      url: `https://newsweb.oslobors.no/message/${best.messageId}`,
-    });
+    kept.push({ title: nwTitle(best), date: best.publishedTime.slice(0, 10), category: best.category?.[0]?.category_no || "", url: `https://newsweb.oslobors.no/message/${best.messageId}` });
     if (kept.length >= 8) break;
   }
   return kept;
+}
+
+async function fetchMessageBody(id) {
+  const res = await fetch(`https://api3.oslo.oslobors.no/v1/newsreader/message?messageId=${id}`, { headers: { "User-Agent": UA } });
+  if (!res.ok) return "";
+  return (await res.json())?.data?.message?.body || "";
+}
+
+// Tolk en meldepliktig-handel-melding til {type, antall, kurs, navn, rolle}. Best effort.
+function parseInsider(raw) {
+  const n = raw.replace(/ /g, " ").replace(/\s+/g, " ").trim();
+  if (/inkurie/i.test(n) || (/viser til børsmelding/i.test(n) && /korrekt|korreksjon/i.test(n))) return null; // korreksjon
+  const priceM = n.match(/kurs(?:\s*(?:på|NOK))?\s*(?:NOK\s*)?(\d[\d ]*,\d+|\d[\d ]*\d|\d)\s*(?:kroner|NOK|kr|pr)/i) || n.match(/kurs(?:\s*(?:på|NOK))?\s*(\d[\d ]*,\d+)/i);
+  const price = priceM ? parseFloat(priceM[1].replace(/ /g, "").replace(",", ".")) : null;
+  // Batch (aksjekjøpsprogram med tabell over flere) – oppsummer uten skjørt totaltall.
+  if (/følgende primærinnsidere|aksjer kjøpt\s+ny/i.test(n)) {
+    return price ? { type: "Tildeling", shares: null, price, name: "Aksjekjøpsprogram for ansatte", role: "Konsernledelse m.fl." } : null;
+  }
+  const typeM = n.match(/\b(kjøpt|ervervet|tegnet|solgt|avhendet)\b/i);
+  const type = typeM ? (/solgt|avhendet/i.test(typeM[1]) ? "Salg" : "Kjøp") : null;
+  const shM = n.match(/(?:kjøpt|ervervet|tegnet|solgt|avhendet)\s+(\d[\d ]*)\s+aksjer/i);
+  const shares = shM ? parseInt(shM[1].replace(/ /g, ""), 10) : null;
+  let name = null;
+  const NAME = "[A-ZÆØÅ][\\wæøå]+(?: [A-ZÆØÅ][\\wæøå]+)+";
+  for (const re of [new RegExp(`i Storebrand ASA,\\s*(${NAME}),\\s*har`), new RegExp(`(${NAME})\\s+(?:har etter|og nærstående|eier etter|har den|har i dag)`), new RegExp(`(?:konsernsjef|konserndirektør|styremedlem|styreleder|finansdirektør)[^,.]{0,40}?\\b(${NAME})\\b`, "i")]) {
+    const mm = n.match(re); if (mm) { name = mm[1]; break; }
+  }
+  const roleM = n.match(/(konsernsjef|konserndirektør|styreleder|styremedlem|finansdirektør|primærinnsider)/i);
+  const role = roleM ? roleM[1][0].toUpperCase() + roleM[1].slice(1).toLowerCase() : "Primærinnsider";
+  return type && shares && price && name ? { type, shares, price, name, role } : null;
+}
+
+// Bygg innsidetabell fra meldepliktig-handel-meldinger (norsk versjon), nyeste først.
+async function buildInsiders(stb) {
+  const cand = stb.filter((m) => m.category?.[0]?.id === 1102 && /meldepliktig/i.test(m.title)).slice(0, 12);
+  const out = [];
+  for (const m of cand) {
+    const tx = parseInsider(await fetchMessageBody(m.messageId));
+    if (tx) out.push({ ...tx, date: m.publishedTime.slice(0, 10), url: `https://newsweb.oslobors.no/message/${m.messageId}` });
+    if (out.length >= 6) break;
+  }
+  return out;
 }
 
 async function seriesForTicker(ticker) {
@@ -206,9 +244,13 @@ async function main() {
     if (s && s.oneY.length) peerSeries[p.ticker] = s;
   }
 
-  // ---- Børsmeldinger (best effort – egen fil, feiler stille) ----
-  let newsFeed = [];
-  try { newsFeed = await fetchNewsFeed(); } catch (e) { console.warn("NewsWeb feilet, hopper over børsmeldinger:", e.message); }
+  // ---- Børsmeldinger + innsidehandel fra NewsWeb (best effort – egne filer, feiler stille) ----
+  let newsFeed = [], insiders = [];
+  try {
+    const msgs = await fetchStbMessages();
+    newsFeed = buildFeed(msgs);
+    insiders = await buildInsiders(msgs);
+  } catch (e) { console.warn("NewsWeb feilet, hopper over børsmeldinger/innsidehandel:", e.message); }
 
   const updated = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
 
@@ -236,6 +278,13 @@ async function main() {
       "// AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.\n" +
       "const STB_NEWSFEED = " + JSON.stringify({ updated, messages: newsFeed }, null, 2) + ";\n";
     writeFileSync(join(ROOT, "js", "newsfeed.js"), newsJs);
+  }
+  if (insiders.length) {
+    const insJs =
+      "// Innsidehandel (meldepliktig handel for primærinnsidere) tolket fra Oslo Børs NewsWeb.\n" +
+      "// AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd. Faller tilbake på data.js hvis fraværende.\n" +
+      "const STB_INSIDERS = " + JSON.stringify({ updated, transactions: insiders }, null, 2) + ";\n";
+    writeFileSync(join(ROOT, "js", "insiders.js"), insJs);
   }
 
   console.log(

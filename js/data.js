@@ -234,8 +234,24 @@ const STB_DATA = {
         "Storebrand kjøper tilbake egne aksjer i stor skala. Planen er 2 mrd. kr i 2026 og minst 1,5 mrd. kr årlig fra 2027 til 2030 — samlet ventes over 12 mrd. kr i tilbakekjøp i perioden 2022–2030. Tilbakekjøp reduserer antall utestående aksjer og løfter normalt resultat per aksje.",
       treasurySharesNote:
         "Selskapet satt på 14 398 905 egne aksjer (3,21 % av aksjekapitalen) ifølge melding fra februar 2025 — antallet endres løpende med tilbakekjøp og tildelinger.",
+      // Tilbakekjøpsprogram (mrd kr). 2026 er annonsert; 2027–2030 er prediksjon fra uttalt policy
+      // (minst 1,5 mrd/år). Samlet er over 12 mrd varslet for 2022–2030.
+      schedule: [
+        { year: "2026", amount: 2.0, done: 1.0, kind: "planned" },
+        { year: "2027", amount: 1.5, kind: "predicted" },
+        { year: "2028", amount: 1.5, kind: "predicted" },
+        { year: "2029", amount: 1.5, kind: "predicted" },
+        { year: "2030", amount: 1.5, kind: "predicted" },
+      ],
+      cumulativeNote: "Samlet er over 12 mrd. kr i tilbakekjøp varslet for perioden 2022–2030.",
     },
   },
+
+  // Egne aksjer (tilbakekjøpt) som andel av aksjekapitalen – sparsomme, men ekte holdepunkter fra børsmeldinger.
+  treasuryHistory: [
+    { date: "feb. 2025", pct: 3.21, shares: 14398905 },
+    { date: "mar. 2026", pct: 2.85, shares: 12407446 },
+  ],
 
   ownership: {
     note: "Folketrygdfondet er den klart største aksjonæren med rundt 11 %. Resten (~81 %) er spredt på institusjonelle og utenlandske eiere — aksjen er bredt eid. Kilde: Proff.no / MarketScreener.",

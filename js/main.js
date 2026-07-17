@@ -166,7 +166,7 @@ function renderStats() {
 }
 
 /* ---------- Prisgraf med periode + peer-sammenligning ---------- */
-const PERIODS = [["1m", "1 mnd"], ["3m", "3 mnd"], ["oneY", "1 år"], ["fiveY", "5 år"], ["max", "Maks"]];
+const PERIODS = [["1u", "1 uke"], ["1m", "1 mnd"], ["3m", "3 mnd"], ["oneY", "1 år"], ["fiveY", "5 år"], ["max", "Maks"]];
 const PEER_SHORT = { "GJF.OL": "Gjensidige", "PROT.OL": "Protector", "TRYG.CO": "Tryg", "SAMPO.HE": "Sampo" };
 const PEER_COLORS = { "GJF.OL": "#6ea8dc", "PROT.OL": "#3ecf8e", "TRYG.CO": "#c58af0", "SAMPO.HE": "#e8975a" };
 const MND = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"];
@@ -175,6 +175,7 @@ const oneYearRet = (series) => (series && series.length > 1 ? ((series[series.le
 // Hent riktig kursserie for valgt periode. 1m/3m utledes fra den daglige 1-års-serien.
 function seriesSlice(store, period) {
   if (!store) return null;
+  if (period === "1u") return store.oneY.slice(-5);
   if (period === "1m") return store.oneY.slice(-22);
   if (period === "3m") return store.oneY.slice(-66);
   return store[period];
@@ -672,12 +673,23 @@ function renderInsiders() {
     document.getElementById("insider-source").innerHTML =
       `<a href="${d.sourceUrl}" target="_blank" rel="noopener" class="src-pill">${d.sourceLabel || "Oslo Børs NewsWeb ↗"}</a>`;
   }
+  // Bruk ferske API-tolkede transaksjoner hvis de finnes, ellers kuratert fallback.
+  const live = typeof STB_INSIDERS !== "undefined" && STB_INSIDERS.transactions && STB_INSIDERS.transactions.length;
+  const txs = live ? STB_INSIDERS.transactions : d.transactions;
+  const isoDate = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : s);
   const tb = document.getElementById("insider-table-body");
-  d.transactions.forEach((t) => {
-    const val = t.shares * t.price;
-    const typeCell = t.type === "Kjøp" ? '<span class="tag-buy">KJØP</span>' : t.type;
-    tb.appendChild(h(`<tr><td class="mono" style="color:var(--mut)">${t.date}</td><td>${t.name}</td><td>${typeCell}</td><td class="num">${nf0.format(t.shares)}</td><td class="num">${nf0.format(t.price)}</td><td class="num">${nf0.format(val)}</td></tr>`));
+  txs.forEach((t) => {
+    const val = t.shares != null ? nf0.format(t.shares * t.price) : "–";
+    const sharesC = t.shares != null ? nf0.format(t.shares) : "flere";
+    const typeCell = t.type === "Kjøp" ? '<span class="tag-buy">KJØP</span>' : t.type === "Salg" ? '<span class="tag-sell">SALG</span>' : t.type;
+    const nameC = t.url ? `<a href="${t.url}" target="_blank" rel="noopener" class="linkish">${t.name}</a>` : t.name;
+    const roleSub = t.role ? `<div style="font-size:11px;color:var(--mut)">${t.role}</div>` : "";
+    tb.appendChild(h(`<tr><td class="mono" style="color:var(--mut)">${isoDate(t.date)}</td><td>${nameC}${roleSub}</td><td>${typeCell}</td><td class="num">${sharesC}</td><td class="num">${nf0.format(t.price)}</td><td class="num">${val}</td></tr>`));
   });
+  if (live) {
+    document.getElementById("insider-lead").textContent =
+      "Meldepliktige handler for primærinnsidere, hentet automatisk fra Oslo Børs NewsWeb og oppdatert løpende. Innsidere har i hovedsak vært nettokjøpere — ofte tolket positivt, men ingen garanti for kursutvikling.";
+  }
   document.getElementById("buyback-text").textContent = d.buyback.description;
   const bm = document.getElementById("buyback-meter");
   bm.appendChild(h(`<div class="fill" style="width:50%"></div>`));
@@ -844,6 +856,35 @@ function showCompanies() {
   openModal("Sentrale selskaper i konsernet", wrap);
 }
 
+function showBuybackHistory() {
+  const bb = STB_DATA.insiders.buyback, sched = bb.schedule || [];
+  const maxA = Math.max(...sched.map((s) => s.amount));
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">Tilbakekjøp av egne aksjer (mrd. kr). 2026 er annonsert program; 2027–2030 er en prediksjon fra selskapets uttalte policy om minst 1,5 mrd/år. Tilbakekjøp reduserer antall aksjer og løfter normalt resultat per aksje.</div>`));
+  sched.forEach((s) => {
+    const w = (s.amount / maxA) * 100;
+    const col = s.kind === "predicted" ? "var(--mut)" : "var(--acc)";
+    const tag = s.kind === "predicted" ? ' <span style="color:var(--mut)">prediksjon</span>' : s.done != null ? ` <span style="color:var(--up)">~${nf1.format(s.done)} mrd gjennomført</span>` : "";
+    wrap.appendChild(h(`<div class="seg-row" style="margin-bottom:12px;"><div class="seg-head"><span>${s.year}${tag}</span><span class="mono">${nf1.format(s.amount)} mrd</span></div><div class="seg-track"><div class="seg-fill" style="width:${w}%;background:${col};${s.kind === "predicted" ? "opacity:.5;" : ""}"></div></div></div>`));
+  });
+  wrap.appendChild(h(`<p class="ntext" style="margin-top:6px;color:var(--mut)">${bb.cumulativeNote || ""}</p>`));
+  wrap.appendChild(h(`<div class="pop-legend"><span><span style="color:var(--acc)">▮</span> Annonsert</span><span><span style="color:var(--mut)">▮</span> Prediksjon (policy)</span><a href="https://newsweb.oslobors.no/search?issuer=1955" target="_blank" rel="noopener" style="color:var(--acc)">Status-meldinger på Oslo Børs ↗</a></div>`));
+  openModal("Tilbakekjøp – beløp og plan", wrap);
+}
+function showOwnershipHistory() {
+  const own = STB_DATA.ownershipBreakdown, th = STB_DATA.treasuryHistory || [];
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">Storebrand er bredt eid. Det finnes ingen offentlig sammenhengende tidsserie for hele aksjonærlisten, men eierendringer flagges på Oslo Børs når terskler krysses. Under: største eiere nå, og utviklingen i egne (tilbakekjøpte) aksjer.</div>`));
+  const maxOwn = Math.max(...own.map((o) => o.pct));
+  own.forEach((o) => wrap.appendChild(h(`<div class="seg-row" style="margin-bottom:8px;"><div class="seg-head"><span>${o.name}</span><span class="mono" style="color:var(--mut)">${nf1.format(o.pct)} %</span></div><div class="seg-track"><div class="seg-fill" style="width:${(o.pct / maxOwn) * 100}%;background:var(--peer)"></div></div></div>`)));
+  if (th.length >= 2) {
+    wrap.appendChild(h(`<div class="method-h">Egne aksjer (tilbakekjøpt) over tid</div>`));
+    wrap.appendChild(h(`<p class="ntext" style="color:var(--tx)">${th.map((t) => `${nf2.format(t.pct)} % (${t.date})`).join(" → ")}. Andelen svinger med tilbakekjøp (øker) og sletting eller tildeling (reduserer).</p>`));
+  }
+  wrap.appendChild(h(`<div class="pop-legend"><a href="https://newsweb.oslobors.no/search?issuer=1955" target="_blank" rel="noopener" style="color:var(--acc)">Se flaggemeldinger på Oslo Børs ↗</a><a href="https://www.proff.no/aksjon%C3%A6rer/-/storebrand-asa/916300484" target="_blank" rel="noopener" style="color:var(--acc)">Aksjonærer på Proff.no ↗</a></div>`));
+  openModal("Eierstruktur", wrap);
+}
+
 /* ---------- Analytikernes kursmål ---------- */
 function renderAnalysts() {
   const q = STB_DATA.quote;
@@ -889,10 +930,13 @@ function renderAnalysts() {
 }
 
 function wirePopups() {
-  const seg = document.getElementById("segment-title");
-  if (seg) seg.addEventListener("click", showSegmentDev);
-  const comp = document.getElementById("company-subs-title");
-  if (comp) comp.addEventListener("click", showCompanies);
+  const wire = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener("click", (ev) => { if (!ev.target.classList.contains("info-i")) fn(); }); };
+  wire("segment-title", showSegmentDev);
+  wire("company-subs-title", showCompanies);
+  wire("cmp-pe-title", showPeHistory);
+  wire("cmp-yield-title", showYieldHistory);
+  wire("buyback-title", showBuybackHistory);
+  wire("ownership-title", showOwnershipHistory);
 }
 
 renderNav();

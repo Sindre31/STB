@@ -282,6 +282,7 @@ td.mono, td.num { font-family: 'IBM Plex Mono', monospace; }
 tr.subject { background: color-mix(in srgb, var(--acc) 10%, transparent); }
 tr.subject td { font-weight: 700; }
 .tag-buy { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--up); border: 1px solid var(--up); border-radius: 4px; padding: 1px 8px; }
+.tag-sell { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--down); border: 1px solid var(--down); border-radius: 4px; padding: 1px 8px; }
 
 /* News rows */
 .news-row {
