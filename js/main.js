@@ -361,6 +361,7 @@ function renderAiExpert() {
   const anchors = [];
   if (q.analystTarget) anchors.push({ label: "analytikermål", value: q.analystTarget });
   if (q.epsTtm && peerAvgPe) anchors.push({ label: `bransje-P/E ${nf1.format(peerAvgPe)}×`, value: q.epsTtm * peerAvgPe });
+  if (q.forwardEps && peerAvgPe) anchors.push({ label: `forventet EPS ${nf1.format(peerAvgPe)}×`, value: q.forwardEps * peerAvgPe });
   if (q.bookValue && peerAvgPB) anchors.push({ label: `bransje-P/B ${nf1.format(peerAvgPB)}×`, value: q.bookValue * peerAvgPB });
   const anchorAvg = anchors.length ? avg(anchors.map((a) => a.value)) : q.price;
 
@@ -517,8 +518,8 @@ function renderAiExpert() {
       sig("52-ukers posisjon", rangePos <= 60, `${nf0.format(rangePos)} % opp i 52-ukers spennet`),
       sig("Soliditet", k.solvency >= 175, `Solvens ${k.solvency} % ${k.solvency >= 175 ? "gir rom for tilbakekjøp" : ""}`),
     ];
-    // B4: enkelt rentesignal – stigende lange renter er normalt positivt for et livselskap.
-    if (q.rate10yChg3m != null) signals.push(sig("Renteretning", q.rate10yChg3m >= 0, `Lange renter (10 år, global) ${q.rate10yChg3m >= 0 ? "opp" : "ned"} ${nf2.format(Math.abs(q.rate10yChg3m))} pp siste 3 mnd — ${q.rate10yChg3m >= 0 ? "positivt" : "negativt"} for livselskap`));
+    // B4: rentesignal – Norges Banks styringsrente. Høyere/stigende rente er normalt positivt for et livselskap.
+    if (q.policyRateChg != null) signals.push(sig("Rentenivå", q.policyRateChg >= 0, `Styringsrenten ${nf1.format(q.policyRate)} % ${q.policyRateChg >= 0 ? "opp" : "ned"} ${nf1.format(Math.abs(q.policyRateChg))} pp siste halvår — ${q.policyRateChg >= 0 ? "positivt" : "negativt"} for livselskap`));
     const sc = signals.filter((s) => s.good).length - signals.filter((s) => !s.good).length;
     const chips = document.getElementById("ai-signals"); chips.innerHTML = "";
     signals.forEach((s) => chips.appendChild(h(`<span class="ai-chip ${s.good ? "good" : "bad"}">${s.good ? "▲" : "▼"} ${s.label}<span class="ai-chip-sub">${s.detail}</span></span>`)));
@@ -554,7 +555,7 @@ function buildMethodModal() {
     `<ul class="method-list">` +
     `<li><strong>Verdilinje:</strong> et glidende snitt av kursen som trekkes mot en fundamental verdi. Den fundamentale delen <em>følger inntjeningen</em> — resultat per aksje (TTM) × en implisitt rimelig multippel${s.fairMult ? ` (~${nf1.format(s.fairMult)}×)` : ""} — så verdien flytter seg når resultatene endres, ikke bare når kursen gjør det.</li>` +
     `<li><strong>Fundamental forankring:</strong> snittet av flere uavhengige ankere — ${anchorTxt} — gir ${s.anchorAvg ? kr(s.anchorAvg, 0) : "–"}.</li>` +
-    `<li><strong>${s.signals ? s.signals.length : 7} signaler:</strong> verdi vs. kurs, analytikermål, P/E og utbytte mot bransjen, relativ styrke, 52-ukers posisjon, soliditet${s.signals && s.signals.some((x) => x.label === "Renteretning") ? " og renteretning" : ""}.</li>` +
+    `<li><strong>${s.signals ? s.signals.length : 7} signaler:</strong> verdi vs. kurs, analytikermål, P/E og utbytte mot bransjen, relativ styrke, 52-ukers posisjon, soliditet${s.signals && s.signals.some((x) => x.label === "Rentenivå") ? " og rentenivå (Norges Banks styringsrente)" : ""}.</li>` +
     `<li><strong>Fremtidsprojeksjon:</strong> konvergerer mot fundamental verdi, med et usikkerhetsbånd som kombinerer aksjens <em>faktiske</em> volatilitet (${s.volAnnual != null ? nf0.format(s.volAnnual) + " % årlig" : "–"}) og spriket mellom høyeste og laveste analytikermål.</li>` +
     `<li><strong>Ensemble (walk-forward):</strong> tre delmodeller (mean reversion, momentum, langsiktig verdi) vektes etter treffrate på en treningsperiode og valideres på en senere, uavhengig periode — så vektene ikke er overtilpasset.</li>` +
     `<li><strong>Dynamisk terskel:</strong> grensen for «dyr»/«billig» skaleres med volatiliteten (nå ±${s.thr != null ? nf1.format(s.thr) : "6"} %) i stedet for et fast tall.</li>` +

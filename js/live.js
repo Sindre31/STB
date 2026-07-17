@@ -16,6 +16,7 @@ const STB_LIVE = {
     "dividendYield": 2.75,
     "marketCap": 82.01,
     "epsTtm": 11.43,
+    "forwardEps": 13.42,
     "bookValue": 78.89,
     "priceToBook": 2.48,
     "analystTarget": 188.7,
@@ -23,7 +24,8 @@ const STB_LIVE = {
     "analystLow": 124,
     "analystRating": "Kjøp",
     "analystCount": 10,
-    "rate10yChg3m": 0.22,
+    "policyRate": 4.25,
+    "policyRateChg": 0.25,
     "perf": {
       "oneY": 32.5,
       "fiveY": 159.2,

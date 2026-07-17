@@ -9,7 +9,7 @@ const STB_HEALTH = {
     },
     "Nøkkeltall": {
       "ok": true,
-      "n": 12
+      "n": 13
     },
     "Peers": {
       "ok": true,

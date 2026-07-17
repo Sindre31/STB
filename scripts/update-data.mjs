@@ -74,6 +74,7 @@ async function fetchFundamentals(ticker, auth) {
     dividendYield: round(raw(sd, "dividendYield") * 100),
     marketCap: round(raw(sd, "marketCap") / 1e9),
     epsTtm: round(raw(ks, "trailingEps")),
+    forwardEps: round(raw(ks, "forwardEps")),
     bookValue: round(raw(ks, "bookValue")),
     priceToBook: round(raw(ks, "priceToBook")),
     beta: round(raw(sd, "beta")),
@@ -86,15 +87,17 @@ async function fetchFundamentals(ticker, auth) {
 }
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null && !Number.isNaN(v)));
 
-// Lange renter (10 år) som global proxy for rentemiljøet Storebrand er følsomt for.
-// Vi bruker kun retningen (endring siste ~3 mnd), ikke absoluttnivået, så skala er uvesentlig.
+// Norges Banks styringsrente (offisiell norsk rente) – rentemiljøet Storebrand er følsomt for.
+// Vi henter nivået og endringen siste halvår (retningen i rentesyklusen).
 async function fetchRate() {
   try {
-    const r = await fetchChart("%5ETNX", "6mo", "1wk");
-    const s = seriesFrom(r, "day").map((d) => d[1]);
-    if (s.length < 3) return {};
-    const last = s[s.length - 1], ago = s[Math.max(0, s.length - 14)];
-    return { rate10yChg3m: round(last - ago, 2) };
+    const from = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
+    const res = await fetch(`https://data.norges-bank.no/api/data/IR/B.KPRA.SD.R?format=csv&startPeriod=${from}`, { headers: { "User-Agent": UA } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = [...(await res.text()).matchAll(/;(\d{4}-\d{2}-\d{2});([\d.]+);/g)].map((m) => parseFloat(m[2]));
+    if (rows.length < 5) return {};
+    const last = rows[rows.length - 1], ago = rows[Math.max(0, rows.length - 126)]; // ~6 mnd handledager
+    return { policyRate: round(last, 2), policyRateChg: round(last - ago, 2) };
   } catch { return {}; }
 }
 
@@ -362,7 +365,7 @@ async function main() {
       "Kursserier": { ok: oneY.length > 100, n: oneY.length },
       "Nøkkeltall": { ok: Object.keys(stbFund).length >= 3, n: Object.keys(stbFund).length },
       "Peers": { ok: Object.keys(peers).length >= 4, n: Object.keys(peers).length },
-      "Rentesignal": { ok: rate.rate10yChg3m != null, n: rate.rate10yChg3m != null ? 1 : 0 },
+      "Rentesignal": { ok: rate.policyRateChg != null, n: rate.policyRateChg != null ? 1 : 0 },
       "Innsidehandel": { ok: insiders.length >= 1, n: insiders.length },
       "Tilbakekjøp": { ok: buybacks.length >= 1, n: buybacks.length },
       "Børsmeldinger": { ok: newsFeed.length >= 3, n: newsFeed.length },
