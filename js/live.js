@@ -5,38 +5,38 @@ const STB_LIVE = {
   "updated": "17. juli 2026",
   "dataDate": "2026-07-17",
   "quote": {
-    "price": 196.9,
-    "change": 0.2,
-    "changePct": 0.1,
+    "price": 196.7,
+    "change": 0,
+    "changePct": 0,
     "week52Low": 145.1,
     "week52High": 199.5,
-    "volume": 104463,
-    "peTtm": 17.23,
-    "peForward": 14.68,
+    "volume": 105438,
+    "peTtm": 17.21,
+    "peForward": 14.66,
     "dividendYield": 2.72,
-    "marketCap": 82.43,
+    "marketCap": 82.35,
     "epsTtm": 11.43,
     "bookValue": 78.89,
-    "priceToBook": 2.5,
+    "priceToBook": 2.49,
     "analystTarget": 188.7,
     "analystHigh": 220,
     "analystLow": 124,
     "analystRating": "Kjøp",
     "analystCount": 10,
     "perf": {
-      "oneY": 33.2,
-      "fiveY": 160.5,
-      "sinceGraph": 364.1
+      "oneY": 33.1,
+      "fiveY": 160.3,
+      "sinceGraph": 363.6
     }
   },
   "peers": {
     "STB.OL": {
-      "pe": 17.23,
+      "pe": 17.21,
       "dividendYield": 2.72,
-      "marketCap": 82.43,
-      "priceToBook": 2.5,
-      "price": 196.9,
-      "oneYearPct": 33.4
+      "marketCap": 82.35,
+      "priceToBook": 2.49,
+      "price": 196.7,
+      "oneYearPct": 33.3
     },
     "GJF.OL": {
       "pe": 21.69,
@@ -47,11 +47,11 @@ const STB_LIVE = {
       "oneYearPct": -1.4
     },
     "PROT.OL": {
-      "pe": 19.68,
+      "pe": 19.67,
       "dividendYield": 4.12,
-      "marketCap": 40.14,
-      "priceToBook": 6,
-      "price": 487.6,
+      "marketCap": 40.12,
+      "priceToBook": 5.99,
+      "price": 487.4,
       "oneYearPct": -6.1
     },
     "TRYG.CO": {
@@ -63,12 +63,12 @@ const STB_LIVE = {
       "oneYearPct": -2.5
     },
     "SAMPO.HE": {
-      "pe": 15.8,
+      "pe": 15.79,
       "dividendYield": 3.78,
-      "marketCap": 25.45,
+      "marketCap": 25.43,
       "priceToBook": 3.12,
-      "price": 9.64,
-      "oneYearPct": 1.9
+      "price": 9.63,
+      "oneYearPct": 1.8
     }
   }
 };

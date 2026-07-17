@@ -833,17 +833,22 @@ function show1yPrice() {
   openModal("Avkastning siste 12 måneder", wrap);
 }
 function showSegmentDev() {
-  const segs = STB_DATA.segments;
+  const segs = STB_DATA.segments, fh = STB_DATA.financialsHistory;
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">Konsernets resultat de siste årene (ekte årstall), og hvordan kontantresultatet fordeler seg på segmentene i siste kvartal mot samme kvartal i fjor. Full segment­historikk år for år ligger i årsrapportene.</div>`));
+  // Ekte flerårig resultattrend for konsernet.
+  wrap.appendChild(h(`<div class="method-h">Konsernresultat (mill. kr, netto)</div>`));
+  wrap.appendChild(historyChartSVG(fh.map((f) => [String(f.year), f.netIncome]), (v) => nf0.format(v), "var(--acc)"));
+  // Per-segment: siste kvartal mot samme kvartal i fjor.
+  wrap.appendChild(h(`<div class="method-h" style="margin-top:20px;">Kontantresultat per segment: Q2 2026 vs Q2 2025</div>`));
   const withPrev = segs.map((s) => ({ ...s, prev: s.growthPct != null ? s.value / (1 + s.growthPct / 100) : null }));
   const maxV = Math.max(...segs.map((s) => s.value));
-  const wrap = document.createElement("div");
-  wrap.appendChild(h(`<div class="modal-sub">Kontantresultat per segment, Q2 2026 mot samme kvartal året før (mill. kr). Fjorårstallet er utledet fra selskapets rapporterte vekst år over år.</div>`));
   withPrev.forEach((s) => {
     const barNow = (s.value / maxV) * 100, barPrev = s.prev != null ? (s.prev / maxV) * 100 : 0;
     wrap.appendChild(h(`<div class="seg-row" style="margin-bottom:14px;"><div class="seg-head"><span>${s.name}${s.growth ? ` <span style="color:var(--up)">${s.growth}</span>` : ""}</span><span class="mono">${nf0.format(s.value)}${s.prev != null ? ` <span style="color:var(--mut)">(${nf0.format(s.prev)})</span>` : ""}</span></div><div class="seg-track"><div class="seg-fill" style="width:${barNow}%"></div></div>${s.prev != null ? `<div class="seg-track" style="margin-top:4px;"><div class="seg-fill" style="width:${barPrev}%;background:var(--mut);opacity:.55"></div></div>` : ""}</div>`));
   });
-  wrap.appendChild(h(`<div class="pop-legend"><span><span style="color:var(--acc)">▮</span> Q2 2026</span><span><span style="color:var(--mut)">▮</span> Q2 2025 (avledet)</span></div>`));
-  openModal("Kontantresultat per segment – utvikling", wrap);
+  wrap.appendChild(h(`<div class="pop-legend"><span><span style="color:var(--acc)">▮</span> Q2 2026</span><span><span style="color:var(--mut)">▮</span> Q2 2025 (avledet)</span><a href="https://www.storebrand.no/en/investor-relations/annual-reports" target="_blank" rel="noopener" style="color:var(--acc)">Årsrapporter ↗</a></div>`));
+  openModal("Resultat- og segmentutvikling", wrap);
 }
 function showCompanies() {
   const wrap = document.createElement("div");
@@ -883,6 +888,36 @@ function showOwnershipHistory() {
   }
   wrap.appendChild(h(`<div class="pop-legend"><a href="https://newsweb.oslobors.no/search?issuer=1955" target="_blank" rel="noopener" style="color:var(--acc)">Se flaggemeldinger på Oslo Børs ↗</a><a href="https://www.proff.no/aksjon%C3%A6rer/-/storebrand-asa/916300484" target="_blank" rel="noopener" style="color:var(--acc)">Aksjonærer på Proff.no ↗</a></div>`));
   openModal("Eierstruktur", wrap);
+}
+
+function showAnalystTargets() {
+  const q = STB_DATA.quote, price = q.price;
+  const parseNo = (d) => { const p = d.split("."); return Date.parse(`${p[2]}-${p[1]}-${p[0]}`); };
+  const pts = (STB_DATA.analystTargets?.list || []).filter((a) => a.target).map((a) => ({ firm: a.firm, target: a.target, t: parseNo(a.date), buy: /kjøp/i.test(a.rating) }));
+  const th = (typeof STB_TARGET_HISTORY !== "undefined" && STB_TARGET_HISTORY.points) ? STB_TARGET_HISTORY.points.map((p) => ({ t: Date.parse(p.date), mean: p.mean })) : [];
+  const wrap = document.createElement("div");
+  wrap.appendChild(h(`<div class="modal-sub">Hvert meglerhus sitt siste kursmål plottet på datoen det ble satt (fargelagt etter anbefaling), mot dagens kurs og konsensus. Meglerhus oppdaterer mål sjelden, så per-hus er ett punkt hver; konsensuslinja bygges opp dag for dag fremover.</div>`));
+  const W = 620, H = 320, PADL = 46, PADR = 96, TOP = 18, BOT = 250;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart-svg" });
+  const allT = [...pts.map((p) => p.t), ...th.map((m) => m.t), Date.now()];
+  const tMin = Math.min(...allT), tMax = Math.max(...allT) + 3 * 86400000;
+  const allY = [...pts.map((p) => p.target), price, q.analystHigh, q.analystLow].filter((v) => v != null);
+  let yMin = Math.min(...allY), yMax = Math.max(...allY); const padY = (yMax - yMin) * 0.12 || 10; yMin -= padY; yMax += padY;
+  const X = (t) => (tMax === tMin ? PADL + (W - PADR - PADL) / 2 : PADL + (t - tMin) / (tMax - tMin) * (W - PADR - PADL));
+  const Y = (v) => TOP + (1 - (v - yMin) / (yMax - yMin)) * (BOT - TOP);
+  for (let s = 0; s <= 4; s++) { const v = yMin + (yMax - yMin) * (s / 4), yy = Y(v); svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: yy, y2: yy, class: "chart-grid" })); svg.appendChild(el("text", { x: PADL - 6, y: yy + 4, "text-anchor": "end", class: "chart-axis" }, nf0.format(v))); }
+  [tMin, tMax].forEach((t, i) => { const d = new Date(t); svg.appendChild(el("text", { x: X(t), y: BOT + 20, "text-anchor": i === 0 ? "start" : "end", class: "chart-axis" }, MND[d.getUTCMonth()] + " " + String(d.getUTCFullYear()).slice(2))); });
+  const hline = (v, col, label) => { if (v == null) return; svg.appendChild(el("line", { x1: PADL, x2: W - PADR, y1: Y(v), y2: Y(v), stroke: col, "stroke-width": 1, "stroke-dasharray": "4,3" })); svg.appendChild(el("text", { x: W - PADR + 5, y: Y(v) + 4, class: "chart-axis", fill: col }, `${label} ${nf0.format(v)}`)); };
+  hline(q.analystHigh, "var(--mut)", "Høy");
+  hline(q.analystLow, "var(--mut)", "Lav");
+  hline(price, "var(--tx)", "Kurs");
+  if (th.length > 1) { let d = ""; th.forEach((m, i) => (d += (i ? " L " : "M ") + X(m.t) + " " + Y(m.mean))); svg.appendChild(el("path", { d, fill: "none", stroke: "var(--peer)", "stroke-width": 2 })); }
+  hline(q.analystTarget, "var(--peer)", "Snitt");
+  pts.forEach((p) => { const c = p.buy ? "var(--up)" : "var(--down)"; svg.appendChild(el("circle", { cx: X(p.t), cy: Y(p.target), r: 4.5, fill: c })); });
+  wrap.appendChild(svg);
+  wrap.appendChild(h(`<div class="pop-legend"><span><span style="color:var(--up)">●</span> Kjøp</span><span><span style="color:var(--down)">●</span> Undervekt/negativ</span><span><span style="color:var(--peer)">—</span> Konsensus (snitt)</span></div>`));
+  wrap.appendChild(h(`<p class="ntext" style="margin-top:10px;color:var(--mut)">Kilde: MarketScreener (per-hus, øyeblikksbilde) og Yahoo Finance (konsensus, akkumuleres). Full tabell med hvem som har hvilket mål står under grafen på siden.</p>`));
+  openModal("Analytikernes kursmål over tid", wrap);
 }
 
 /* ---------- Analytikernes kursmål ---------- */
@@ -937,6 +972,7 @@ function wirePopups() {
   wire("cmp-yield-title", showYieldHistory);
   wire("buyback-title", showBuybackHistory);
   wire("ownership-title", showOwnershipHistory);
+  wire("analyst-firms-title", showAnalystTargets);
 }
 
 renderNav();

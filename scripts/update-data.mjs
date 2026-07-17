@@ -6,7 +6,7 @@
 // Kjøres av GitHub Actions på en tidsplan. Ved feil på kursseriene skrives INGEN filer
 // (gammel, god data beholdes). Nøkkeltall er "best effort": feiler de, beholdes forrige verdi.
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -167,6 +167,25 @@ async function buildInsiders(stb) {
   return out;
 }
 
+// Akkumuler analytikernes konsensus-kursmål (snitt/høy/lav) som en ekte tidsserie som vokser dag for dag.
+function updateTargetHistory(fund) {
+  const file = join(ROOT, "js", "targethistory.js");
+  let points = [];
+  try {
+    if (existsSync(file)) {
+      const m = readFileSync(file, "utf8").match(/const STB_TARGET_HISTORY\s*=\s*([\s\S]*);\s*$/);
+      if (m) points = (JSON.parse(m[1]).points) || [];
+    }
+  } catch { points = []; }
+  if (fund && fund.analystTarget) {
+    const today = new Date().toISOString().slice(0, 10);
+    const pt = { date: today, mean: fund.analystTarget, high: fund.analystHigh ?? null, low: fund.analystLow ?? null };
+    const last = points[points.length - 1];
+    if (last && last.date === today) points[points.length - 1] = pt; else points.push(pt);
+  }
+  return points.slice(-500);
+}
+
 async function seriesForTicker(ticker) {
   const [a, b, c] = await Promise.all([
     fetchChart(ticker, "1y", "1d"),
@@ -285,6 +304,16 @@ async function main() {
       "// AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd. Faller tilbake på data.js hvis fraværende.\n" +
       "const STB_INSIDERS = " + JSON.stringify({ updated, transactions: insiders }, null, 2) + ";\n";
     writeFileSync(join(ROOT, "js", "insiders.js"), insJs);
+  }
+
+  // Analytiker-måltidsserie (vokser dag for dag).
+  const targetHistory = updateTargetHistory(stbFund);
+  if (targetHistory.length) {
+    const thJs =
+      "// Analytikernes konsensus-kursmål over tid (snitt/høy/lav), akkumulert dag for dag.\n" +
+      "// AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.\n" +
+      "const STB_TARGET_HISTORY = " + JSON.stringify({ updated, points: targetHistory }) + ";\n";
+    writeFileSync(join(ROOT, "js", "targethistory.js"), thJs);
   }
 
   console.log(
