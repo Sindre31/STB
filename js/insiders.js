@@ -1,7 +1,7 @@
 // Innsidehandel (meldepliktig handel for primærinnsidere) tolket fra Oslo Børs NewsWeb.
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd. Faller tilbake på data.js hvis fraværende.
 const STB_INSIDERS = {
-  "updated": "20. juli 2026",
+  "updated": "21. juli 2026",
   "transactions": [
     {
       "type": "Kjøp",
@@ -38,6 +38,15 @@ const STB_INSIDERS = {
       "role": "Konsernledelse m.fl.",
       "date": "2026-05-12",
       "url": "https://newsweb.oslobors.no/message/673256"
+    },
+    {
+      "type": "Tildeling",
+      "shares": null,
+      "price": 176.56,
+      "name": "Aksjekjøpsprogram for ansatte",
+      "role": "Konsernledelse m.fl.",
+      "date": "2026-02-18",
+      "url": "https://newsweb.oslobors.no/message/666156"
     }
   ]
 };
