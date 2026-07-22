@@ -1,7 +1,7 @@
 // Innsidehandel (meldepliktig handel for primærinnsidere) tolket fra Oslo Børs NewsWeb.
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd. Faller tilbake på data.js hvis fraværende.
 const STB_INSIDERS = {
-  "updated": "21. juli 2026",
+  "updated": "22. juli 2026",
   "transactions": [
     {
       "type": "Kjøp",

@@ -1,7 +1,7 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "21. juli 2026",
+  "updated": "22. juli 2026",
   "messages": [
     {
       "title": "Status tilbakekjøp av egne aksjer",
@@ -34,6 +34,12 @@ const STB_NEWSFEED = {
       "url": "https://newsweb.oslobors.no/message/678148"
     },
     {
+      "title": "Invitasjon til resultatpresentasjon for 2. kvartal 2026",
+      "date": "2026-07-01",
+      "category": "IKKE-INFORMASJONSPLIKTIGE PRESSEMELDINGER",
+      "url": "https://newsweb.oslobors.no/message/677444"
+    },
+    {
       "title": "Tilbakekjøpsprogram av egne aksjer fullført",
       "date": "2026-06-30",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
@@ -44,12 +50,6 @@ const STB_NEWSFEED = {
       "date": "2026-06-29",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/677203"
-    },
-    {
-      "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-06-08",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/675591"
     }
   ]
 };
