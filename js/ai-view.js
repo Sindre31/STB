@@ -2,8 +2,8 @@
 // nøkkeltallene i live.js. AUTO-GENERERT av scripts/ai-commentary.mjs — ikke rediger for hånd.
 // Vises på siden hvis den finnes; ellers brukes den regelbaserte vurderingen.
 const STB_AI_VIEW = {
-  "generated": "22. juli 2026",
+  "generated": "23. juli 2026",
   "verdict": "Rimelig priset",
-  "headline": "Sterk kursvekst, moderat prising mot bransjen",
-  "body": "Aksjen handles til P/E 17,55 (TTM) og 14,86 fremover, lavere enn de fleste sammenlignbare selskaper som GJF, PROT og TRYG, men over Sampos 15,85. Kursen på 200,4 NOK ligger på toppen av 52-ukersintervallet og over analytikernes snittmål på 191,6 NOK, etter en oppgang på 37,1 % siste år. Direkteavkastningen på 2,74 % er lavere enn hos konkurrentene, mens pris/bok på rundt 2,5 (kurs mot 78,89 i egenkapital) reflekterer den sterke kursutviklingen."
+  "headline": "Lav prising, men nær analytikermål",
+  "body": "Storebrand handles til P/E på 17,4 (14,7 fremover), lavere enn de fleste sammenlignbare selskaper som GJF (21,7), PROT (19,4) og TRYG (20,8), men over Sampo (15,7). Aksjen har steget 34,8 % siste år og ligger nær toppen av 52-ukers intervallet (145,1–200,8), samtidig som kursen på 198,5 allerede overstiger analytikernes snittmål på 191,6. Direkteavkastningen på 2,69 % er lavest blant de sammenlignbare selskapene."
 };
