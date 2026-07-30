@@ -61,9 +61,11 @@ async function main() {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-8",
+      // Haiku holder godt for denne oppgaven: kort oppsummering av tall som
+      // allerede er hentet ut. Merk: Haiku 4.5 støtter ikke "adaptive" thinking –
+      // feltet er derfor utelatt (og trengs ikke her).
+      model: "claude-haiku-4-5",
       max_tokens: 1200,
-      thinking: { type: "adaptive" },
       messages: [{ role: "user", content: prompt }],
     }),
   });
