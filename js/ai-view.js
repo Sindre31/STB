@@ -2,8 +2,8 @@
 // nøkkeltallene i live.js. AUTO-GENERERT av scripts/ai-commentary.mjs — ikke rediger for hånd.
 // Vises på siden hvis den finnes; ellers brukes den regelbaserte vurderingen.
 const STB_AI_VIEW = {
-  "generated": "31. juli 2026",
+  "generated": "3. august 2026",
   "verdict": "Rimelig priset",
-  "headline": "Storebrand handler med rabatt til sammenlignbare",
-  "body": "Aksjekursen ligger 5 % under analytikernes snittmål på 191.6 NOK, og P/E-multiplen på 17.62 er lavere enn de fleste norske forsikringsselskaper. Direkteavkastningen på 2.66 % er moderat, men selskapet har levert solid vekst over 5 år (157 %). Analytikerkonsensus står på kjøp, noe som tyder på oppside, selv om forwardmultiplen på 14.94 indikerer at markedet forventer normalisering av inntjeningen."
+  "headline": "Storebrand handler under analytikermål med solid avkastning",
+  "body": "Aksjen handles til 201.4 NOK mot analytikernes snittmål på 191.6 NOK, noe som tilsier begrenset oppsidepotensial på kort sikt. P/E på 14.94 (fremover) ligger under de fleste sammenlignbare forsikringsselskaper, og 2.68 % direkteavkastning er solid. Sterk kursutvikling siste år (35.8 %) og femår (157.2 %) reflekterer en bedring i fundamentalsne, men aksjen sitter nær sitt 52-ukers høye, noe som begrenser risiko-belønningsforholdet."
 };
