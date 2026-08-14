@@ -2,8 +2,8 @@
 // nøkkeltallene i live.js. AUTO-GENERERT av scripts/ai-commentary.mjs — ikke rediger for hånd.
 // Vises på siden hvis den finnes; ellers brukes den regelbaserte vurderingen.
 const STB_AI_VIEW = {
-  "generated": "13. august 2026",
+  "generated": "14. august 2026",
   "verdict": "Rimelig priset",
-  "headline": "Storebrand handler under analytikermål med solid avkastning",
-  "body": "Aksjen handles på 205.8 NOK mot analytikernes snittmål på 191.6 NOK, noe som indikerer begrenset oppside fra dagens kurs. Terminforward P/E på 15.26 er lavere enn dagens P/E på 18.02 og betydelig under sammenlignbare forsikringsselskaper (15–22), hvilket tyder på et attraktivt verdsettelsesnivå. Direkteavkastningen på 2.65 % er moderat sammenlignet med Tryg (5.55 %), mens den sterke 1-års-kursutvikling på 34.4 % allerede reflekterer betydelig prisoppgang."
+  "headline": "Storebrand noteres til moderat verdsettelse",
+  "body": "STB handles til P/E 18.04 (terminsforwarding), som ligger høyere enn sammenlignbar Sampo (15.18), men under andre nordiske forsikringsselskaper. Kursmålet fra analytikere ligger 7 % under dagens nivå, noe som tyder på begrenset oppsidepotensial på kort sikt. Aksjen har prestert sterkt over fem år (+165.7 %), mens direkteavkastningen på 2.62 % er moderat lavere enn konkurrenter. Prisen reflekterer et solid, men ikke drakturlig verdsatt selskap i en stabil sektor."
 };
