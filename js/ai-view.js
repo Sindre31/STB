@@ -2,8 +2,8 @@
 // nøkkeltallene i live.js. AUTO-GENERERT av scripts/ai-commentary.mjs — ikke rediger for hånd.
 // Vises på siden hvis den finnes; ellers brukes den regelbaserte vurderingen.
 const STB_AI_VIEW = {
-  "generated": "19. august 2026",
+  "generated": "20. august 2026",
   "verdict": "Rimelig priset",
-  "headline": "Solid verdivurdering med moderate forventninger",
-  "body": "STB handles til P/E 17.6 (fremover 14.89), som ligger under sammenlignbare forsikringsselskaper som Gjensidige (21.82) og Tryg (20.43), men på nivå med Sampo (14.95). Kursen ligger 4.8 % under analytikernes snittmål, og utbytteavkastningen på 2.65 % er moderat. Den sterke langsiktige kursutviklingen (159 % på fem år) reflekterer gjenvunnet tillit, mens nåværende verdsettelse virker balansert gitt normaliserte vekstforventninger fremover."
+  "headline": "Storebrand holder seg attraktivt verdsatt",
+  "body": "STB handles med P/E 17.53 som ligger under flere konkurrenter (Gjensidige 21.8, Protector 19.2, Tryg 20.6), mens forwardmultippelen på 14.86 indikerer rolig vekst fremover. Direkteavkastningen på 2.69 % er moderat sammenlignet med konkurrenter, men aksjen har solid momentum med 29 % vekst siste år og analytikerne peker mot 191.6 NOK—5 % under dagens kurs. Prisen-til-bok på 2.63 er rimelig for et etablert forsikringsselskap med denne inntjeningen."
 };
