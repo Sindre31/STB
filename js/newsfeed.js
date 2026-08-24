@@ -1,13 +1,25 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "21. august 2026",
+  "updated": "24. august 2026",
   "messages": [
     {
       "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-08-17",
+      "date": "2026-08-24",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/679923"
+      "url": "https://newsweb.oslobors.no/message/680549"
+    },
+    {
+      "title": "Status share buyback program",
+      "date": "2026-08-24",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/680547"
+    },
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-08-03",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/678936"
     },
     {
       "title": "Status tilbakekjøp av egne aksjer",
@@ -28,12 +40,6 @@ const STB_NEWSFEED = {
       "url": "https://newsweb.oslobors.no/message/677444"
     },
     {
-      "title": "Tilbakekjøpsprogram av egne aksjer fullført",
-      "date": "2026-06-30",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/677390"
-    },
-    {
       "title": "Interest Adjustment",
       "date": "2026-06-16",
       "category": "RENTEREGULERING",
@@ -44,12 +50,6 @@ const STB_NEWSFEED = {
       "date": "2026-06-16",
       "category": "RENTEREGULERING",
       "url": "https://newsweb.oslobors.no/message/676305"
-    },
-    {
-      "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-06-15",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/676135"
     }
   ]
 };
