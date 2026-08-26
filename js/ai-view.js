@@ -2,8 +2,8 @@
 // nøkkeltallene i live.js. AUTO-GENERERT av scripts/ai-commentary.mjs — ikke rediger for hånd.
 // Vises på siden hvis den finnes; ellers brukes den regelbaserte vurderingen.
 const STB_AI_VIEW = {
-  "generated": "25. august 2026",
+  "generated": "26. august 2026",
   "verdict": "Rimelig priset",
-  "headline": "Storebrand viser styrke, men ikke undervurdert",
-  "body": "Aksjen handles med P/E 18.12 (TTM) som er lavere enn de fleste sammenlignbare forsikringsselskaper, og analytikerne ser 7 % nedsiderisiko til 191.6 NOK. Sterk kursutvikling over tid og 2.67 % utbytte er positive, men kursen ligger nær 52-ukerstoppen og fremtids-P/E på 15.29 pricer inn betydelig inntjeningsvekst. Aksjen verken ser billig eller dyr ut på dagens nivå."
+  "headline": "Storebrand attraktiv på verdi, men ikke billig",
+  "body": "Aksjen handles til P/E 18.11, som er lavere enn de fleste sammenlignbare selskaper (GJF, PROT, TRYG på 19-22), og forward P/E på 15.34 indikerer moderat verdsetting fremover. Direkteavkastningen på 2.62 % er lavere enn rivaler, men kursutviklingen på 33 % siste år viser sterk momentum. Analytikernes snittmål ligger 7.4 % under dagens kurs, noe som tyder på begrenset oppside på kort sikt, selv om bokført verdi per aksje på 76 NOK gir et visst sikkerhetsnett."
 };
