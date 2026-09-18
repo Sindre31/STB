@@ -1,7 +1,7 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "17. september 2026",
+  "updated": "18. september 2026",
   "messages": [
     {
       "title": "Quarterly Newsletter Q3 2026",
@@ -29,18 +29,6 @@ const STB_NEWSFEED = {
     },
     {
       "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-08-24",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/680549"
-    },
-    {
-      "title": "Status share buyback program",
-      "date": "2026-08-24",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/680547"
-    },
-    {
-      "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-08-03",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/678936"
@@ -50,6 +38,18 @@ const STB_NEWSFEED = {
       "date": "2026-07-27",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/678683"
+    },
+    {
+      "title": "Meldepliktig handel for primærinnsider",
+      "date": "2026-07-15",
+      "category": "MELDEPLIKTIG HANDEL FOR PRIMÆRINNSIDERE",
+      "url": "https://newsweb.oslobors.no/message/678222"
+    },
+    {
+      "title": "Resultater for andre kvartal 2026",
+      "date": "2026-07-15",
+      "category": "HALVÅRSRAPPORT",
+      "url": "https://newsweb.oslobors.no/message/678199"
     }
   ]
 };
