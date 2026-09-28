@@ -1,8 +1,14 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "25. september 2026",
+  "updated": "28. september 2026",
   "messages": [
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-09-28",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/683127"
+    },
     {
       "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-09-21",
@@ -10,10 +16,10 @@ const STB_NEWSFEED = {
       "url": "https://newsweb.oslobors.no/message/682758"
     },
     {
-      "title": "Quarterly Newsletter Q3 2026",
-      "date": "2026-09-16",
-      "category": "IKKE-INFORMASJONSPLIKTIGE PRESSEMELDINGER",
-      "url": "https://newsweb.oslobors.no/message/682505"
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-09-07",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/681732"
     },
     {
       "title": "Status tilbakekjøp av egne aksjer",
@@ -44,12 +50,6 @@ const STB_NEWSFEED = {
       "date": "2026-07-15",
       "category": "HALVÅRSRAPPORT",
       "url": "https://newsweb.oslobors.no/message/678199"
-    },
-    {
-      "title": "Igangsettelse av tilbakekjøpsprogram",
-      "date": "2026-07-15",
-      "category": "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON",
-      "url": "https://newsweb.oslobors.no/message/678198"
     }
   ]
 };
