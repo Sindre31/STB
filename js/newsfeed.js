@@ -1,7 +1,7 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "7. oktober 2026",
+  "updated": "8. oktober 2026",
   "messages": [
     {
       "title": "Invitasjon til resultatpresentasjon for 3. kvartal 2026",
