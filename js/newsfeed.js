@@ -1,8 +1,14 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "15. oktober 2026",
+  "updated": "16. oktober 2026",
   "messages": [
+    {
+      "title": "Vedtak om kapitalforhøyelse",
+      "date": "2026-10-16",
+      "category": "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON",
+      "url": "https://newsweb.oslobors.no/message/684202"
+    },
     {
       "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-10-12",
@@ -22,24 +28,6 @@ const STB_NEWSFEED = {
       "url": "https://newsweb.oslobors.no/message/682758"
     },
     {
-      "title": "Quarterly Newsletter Q3 2026",
-      "date": "2026-09-16",
-      "category": "IKKE-INFORMASJONSPLIKTIGE PRESSEMELDINGER",
-      "url": "https://newsweb.oslobors.no/message/682505"
-    },
-    {
-      "title": "Interest Adjustment",
-      "date": "2026-09-16",
-      "category": "RENTEREGULERING",
-      "url": "https://newsweb.oslobors.no/message/682475"
-    },
-    {
-      "title": "Rentefastsettelse",
-      "date": "2026-09-16",
-      "category": "RENTEREGULERING",
-      "url": "https://newsweb.oslobors.no/message/682460"
-    },
-    {
       "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-08-31",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
@@ -50,6 +38,18 @@ const STB_NEWSFEED = {
       "date": "2026-08-10",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/679299"
+    },
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-07-20",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/678417"
+    },
+    {
+      "title": "Meldepliktig handel for primærinnsider",
+      "date": "2026-07-15",
+      "category": "MELDEPLIKTIG HANDEL FOR PRIMÆRINNSIDERE",
+      "url": "https://newsweb.oslobors.no/message/678222"
     }
   ]
 };
