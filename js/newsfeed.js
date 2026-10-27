@@ -1,7 +1,7 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "26. oktober 2026",
+  "updated": "27. oktober 2026",
   "messages": [
     {
       "title": "Status tilbakekjøp av egne aksjer",
@@ -28,18 +28,6 @@ const STB_NEWSFEED = {
       "url": "https://newsweb.oslobors.no/message/684404"
     },
     {
-      "title": "Registrering av kapitalforhøyelse",
-      "date": "2026-10-19",
-      "category": "KAPITAL- OG STEMMERETTSENDRINGER",
-      "url": "https://newsweb.oslobors.no/message/684321"
-    },
-    {
-      "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-10-19",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/684275"
-    },
-    {
       "title": "Finansiell kalender",
       "date": "2026-10-05",
       "category": "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON",
@@ -50,6 +38,18 @@ const STB_NEWSFEED = {
       "date": "2026-10-05",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/683554"
+    },
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-09-28",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/683127"
+    },
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-09-14",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/682203"
     }
   ]
 };
