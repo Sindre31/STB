@@ -2,23 +2,23 @@
 // main.js legger disse verdiene over den håndkuraterte dataen i data.js ved innlasting.
 // dataDate = siste handelsdato; brukes til å vise et varsel hvis dataene blir utdaterte.
 const STB_LIVE = {
-  "updated": "29. oktober 2026",
-  "dataDate": "2026-10-29",
+  "updated": "30. oktober 2026",
+  "dataDate": "2026-10-30",
   "quote": {
-    "price": 195.1,
-    "change": 0.9,
-    "changePct": 0.46,
+    "price": 193.8,
+    "change": -1.3,
+    "changePct": -0.67,
     "week52Low": 155.1,
     "week52High": 208.2,
-    "volume": 483661,
-    "peTtm": 18.63,
-    "peForward": 14.43,
-    "dividendYield": 2.78,
-    "marketCap": 81.53,
+    "volume": 643405,
+    "peTtm": 18.51,
+    "peForward": 14.33,
+    "dividendYield": 2.77,
+    "marketCap": 80.99,
     "epsTtm": 10.47,
     "forwardEps": 13.52,
     "bookValue": 78.1,
-    "priceToBook": 2.5,
+    "priceToBook": 2.48,
     "beta": 0.57,
     "analystTarget": 206.6,
     "analystHigh": 245,
@@ -29,54 +29,55 @@ const STB_LIVE = {
     "policyRateChg": 0.5,
     "fx": {
       "NOK": 1,
-      "DKK": 1.381,
-      "EUR": 10.334
+      "DKK": 1.374,
+      "EUR": 10.274
     },
     "perf": {
-      "oneY": 22.5,
-      "fiveY": 115.5,
-      "sinceGraph": 359.8
+      "oneY": 22.6,
+      "fiveY": 110.5,
+      "sinceGraph": 356.8
     }
   },
   "peers": {
     "STB.OL": {
-      "pe": 18.63,
-      "dividendYield": 2.78,
-      "marketCap": 81.53,
-      "priceToBook": 2.5,
-      "price": 195.1,
-      "oneYearPct": 24.2
+      "pe": 18.51,
+      "dividendYield": 2.77,
+      "marketCap": 80.99,
+      "priceToBook": 2.48,
+      "price": 193.8,
+      "oneYearPct": 23.4
     },
     "GJF.OL": {
       "pe": 18.89,
-      "dividendYield": 3.84,
+      "dividendYield": 3.83,
+      "marketCap": 130.59,
       "priceToBook": 5.76,
       "price": 261.2,
       "oneYearPct": -4.2
     },
     "PROT.OL": {
-      "pe": 15.13,
+      "pe": 15.19,
       "dividendYield": 4.48,
-      "marketCap": 36.73,
-      "priceToBook": 5.05,
-      "price": 446.2,
-      "oneYearPct": -2.3
+      "marketCap": 36.88,
+      "priceToBook": 5.07,
+      "price": 448,
+      "oneYearPct": -1.9
     },
     "TRYG.CO": {
-      "pe": 20.58,
+      "pe": 20.63,
       "dividendYield": 5.41,
-      "marketCap": 94.8,
-      "priceToBook": 2.65,
-      "price": 159.1,
-      "oneYearPct": -0.4
+      "marketCap": 95.04,
+      "priceToBook": 2.66,
+      "price": 159.5,
+      "oneYearPct": -0.1
     },
     "SAMPO.HE": {
-      "pe": 14.76,
-      "dividendYield": 3.85,
-      "marketCap": 24.87,
-      "priceToBook": 3.4,
-      "price": 9.45,
-      "oneYearPct": -2.3
+      "pe": 14.86,
+      "dividendYield": 3.81,
+      "marketCap": 25.04,
+      "priceToBook": 3.42,
+      "price": 9.51,
+      "oneYearPct": -1.7
     }
   }
 };
