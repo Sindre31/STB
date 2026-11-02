@@ -1,16 +1,16 @@
 // Innsidehandel (meldepliktig handel for primærinnsidere) tolket fra Oslo Børs NewsWeb.
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd. Faller tilbake på data.js hvis fraværende.
 const STB_INSIDERS = {
-  "updated": "30. oktober 2026",
+  "updated": "2. november 2026",
   "transactions": [
     {
       "type": "Kjøp",
-      "shares": 1000,
-      "price": 190.8,
-      "name": "Martin Skancke",
+      "shares": 3500,
+      "price": 197.9,
+      "name": "Viveka Ekberg",
       "role": "Styremedlem",
-      "date": "2026-10-23",
-      "url": "https://newsweb.oslobors.no/message/684695"
+      "date": "2026-07-15",
+      "url": "https://newsweb.oslobors.no/message/678222"
     }
   ]
 };
