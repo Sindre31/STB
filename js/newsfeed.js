@@ -1,8 +1,26 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "6. november 2026",
+  "updated": "9. november 2026",
   "messages": [
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-11-09",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/685980"
+    },
+    {
+      "title": "Registrering av kapitalforhøyelse",
+      "date": "2026-10-19",
+      "category": "KAPITAL- OG STEMMERETTSENDRINGER",
+      "url": "https://newsweb.oslobors.no/message/684321"
+    },
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-10-19",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/684275"
+    },
     {
       "title": "Vedtak om kapitalforhøyelse",
       "date": "2026-10-16",
@@ -16,40 +34,22 @@ const STB_NEWSFEED = {
       "url": "https://newsweb.oslobors.no/message/683921"
     },
     {
-      "title": "Invitasjon til resultatpresentasjon for 3. kvartal 2026",
-      "date": "2026-10-07",
-      "category": "IKKE-INFORMASJONSPLIKTIGE PRESSEMELDINGER",
-      "url": "https://newsweb.oslobors.no/message/683685"
-    },
-    {
       "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-09-21",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/682758"
     },
     {
-      "title": "Quarterly Newsletter Q3 2026",
-      "date": "2026-09-16",
-      "category": "IKKE-INFORMASJONSPLIKTIGE PRESSEMELDINGER",
-      "url": "https://newsweb.oslobors.no/message/682505"
-    },
-    {
-      "title": "Interest Adjustment",
-      "date": "2026-09-16",
-      "category": "RENTEREGULERING",
-      "url": "https://newsweb.oslobors.no/message/682475"
-    },
-    {
-      "title": "Rentefastsettelse",
-      "date": "2026-09-16",
-      "category": "RENTEREGULERING",
-      "url": "https://newsweb.oslobors.no/message/682460"
-    },
-    {
       "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-08-31",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/681243"
+    },
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-08-10",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/679299"
     }
   ]
 };
