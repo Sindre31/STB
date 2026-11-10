@@ -1,13 +1,19 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "9. november 2026",
+  "updated": "10. november 2026",
   "messages": [
     {
       "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-11-09",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/685980"
+    },
+    {
+      "title": "Påminnelse - Invitasjon til resultatpresentasjon for 3. kvartal 2026",
+      "date": "2026-10-20",
+      "category": "IKKE-INFORMASJONSPLIKTIGE PRESSEMELDINGER",
+      "url": "https://newsweb.oslobors.no/message/684404"
     },
     {
       "title": "Registrering av kapitalforhøyelse",
@@ -35,21 +41,15 @@ const STB_NEWSFEED = {
     },
     {
       "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-09-28",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/683127"
+    },
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-09-21",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/682758"
-    },
-    {
-      "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-08-31",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/681243"
-    },
-    {
-      "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-08-10",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/679299"
     }
   ]
 };
