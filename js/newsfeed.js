@@ -1,8 +1,20 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "16. november 2026",
+  "updated": "17. november 2026",
   "messages": [
+    {
+      "title": "Medhold i tingretten i skattesak",
+      "date": "2026-11-17",
+      "category": "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON",
+      "url": "https://newsweb.oslobors.no/message/686659"
+    },
+    {
+      "title": "District Court rules in favour of Storebrand in tax case",
+      "date": "2026-11-17",
+      "category": "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON",
+      "url": "https://newsweb.oslobors.no/message/686658"
+    },
     {
       "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-11-16",
@@ -34,22 +46,10 @@ const STB_NEWSFEED = {
       "url": "https://newsweb.oslobors.no/message/684404"
     },
     {
-      "title": "Registrering av kapitalforhøyelse",
-      "date": "2026-10-19",
-      "category": "KAPITAL- OG STEMMERETTSENDRINGER",
-      "url": "https://newsweb.oslobors.no/message/684321"
-    },
-    {
-      "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-10-19",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/684275"
-    },
-    {
-      "title": "Status tilbakekjøp av egne aksjer",
-      "date": "2026-09-28",
-      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
-      "url": "https://newsweb.oslobors.no/message/683127"
+      "title": "Finansiell kalender",
+      "date": "2026-10-05",
+      "category": "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON",
+      "url": "https://newsweb.oslobors.no/message/683576"
     }
   ]
 };
