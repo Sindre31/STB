@@ -1,7 +1,7 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "19. november 2026",
+  "updated": "20. november 2026",
   "messages": [
     {
       "title": "Medhold i tingretten i skattesak",

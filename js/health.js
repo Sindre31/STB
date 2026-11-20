@@ -1,7 +1,7 @@
 // Data-helse: status per kilde ved siste kjøring. AUTO-GENERERT av scripts/update-data.mjs.
 const STB_HEALTH = {
-  "updated": "19. november 2026",
-  "dataDate": "2026-11-19",
+  "updated": "20. november 2026",
+  "dataDate": "2026-11-20",
   "sources": {
     "Kursserier": {
       "ok": true,
@@ -21,11 +21,11 @@ const STB_HEALTH = {
     },
     "Innsidehandel": {
       "ok": true,
-      "n": 2
+      "n": 1
     },
     "Tilbakekjøp": {
       "ok": true,
-      "n": 54
+      "n": 56
     },
     "Børsmeldinger": {
       "ok": true,
