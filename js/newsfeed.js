@@ -1,25 +1,13 @@
 // Siste børsmeldinger fra Oslo Børs NewsWeb (issuer 1955 = Storebrand ASA).
 // AUTO-GENERERT av scripts/update-data.mjs — ikke rediger for hånd.
 const STB_NEWSFEED = {
-  "updated": "24. november 2026",
+  "updated": "25. november 2026",
   "messages": [
     {
       "title": "Status tilbakekjøp av egne aksjer",
       "date": "2026-11-23",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/687148"
-    },
-    {
-      "title": "Medhold i tingretten i skattesak",
-      "date": "2026-11-17",
-      "category": "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON",
-      "url": "https://newsweb.oslobors.no/message/686659"
-    },
-    {
-      "title": "District Court rules in favour of Storebrand in tax case",
-      "date": "2026-11-17",
-      "category": "ANNEN INFORMASJONSPLIKTIG REGULATORISK INFORMASJON",
-      "url": "https://newsweb.oslobors.no/message/686658"
     },
     {
       "title": "Status tilbakekjøp av egne aksjer",
@@ -50,6 +38,18 @@ const STB_NEWSFEED = {
       "date": "2026-10-05",
       "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
       "url": "https://newsweb.oslobors.no/message/683554"
+    },
+    {
+      "title": "Status tilbakekjøp av egne aksjer",
+      "date": "2026-09-21",
+      "category": "UTSTEDERS MELDEPLIKT VED HANDEL I EGNE AKSJER",
+      "url": "https://newsweb.oslobors.no/message/682758"
+    },
+    {
+      "title": "Quarterly Newsletter Q3 2026",
+      "date": "2026-09-16",
+      "category": "IKKE-INFORMASJONSPLIKTIGE PRESSEMELDINGER",
+      "url": "https://newsweb.oslobors.no/message/682505"
     }
   ]
 };
